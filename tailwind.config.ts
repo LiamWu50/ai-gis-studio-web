@@ -34,7 +34,14 @@ const config: Config = {
         "destructive-foreground": "hsl(var(--destructive-foreground))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))"
+        ring: "hsl(var(--ring))",
+        surface: "hsl(var(--surface))",
+        "surface-foreground": "hsl(var(--surface-foreground))",
+        panel: "hsl(var(--panel))",
+        "panel-foreground": "hsl(var(--panel-foreground))",
+        inverse: "hsl(var(--inverse))",
+        "inverse-foreground": "hsl(var(--inverse-foreground))",
+        line: "hsl(var(--line))"
       }
     }
   },

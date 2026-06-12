@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
+  :root {
+    --background: 43 34% 91%;
+    --foreground: 0 0% 7%;
+    --card: 43 34% 91%;
+    --card-foreground: 0 0% 7%;
+    --popover: 43 34% 91%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 0 0% 7%;
+    --primary-foreground: 43 34% 91%;
+    --secondary: 38 18% 83%;
+    --secondary-foreground: 0 0% 7%;
+    --muted: 38 12% 78%;
+    --muted-foreground: 48 3% 46%;
+    --accent: 60 2% 16%;
+    --accent-foreground: 43 34% 91%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 38 18% 78%;
+    --input: 38 18% 78%;
+    --ring: 0 0% 7%;
+    --surface: 43 34% 91%;
+    --surface-foreground: 0 0% 7%;
+    --panel: 43 34% 91%;
+    --panel-foreground: 0 0% 7%;
+    --inverse: 0 0% 7%;
+    --inverse-foreground: 43 34% 91%;
+    --line: 38 18% 78%;
+    --workbench-grid: rgba(23, 23, 23, 0.12);
+    --workbench-map-overlay: linear-gradient(
+      135deg,
+      rgba(240, 236, 224, 0.88),
+      rgba(194, 188, 179, 0.24)
+    );
+    --radius: 0;
+  }
+
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 43 34% 91%;
+    --card: 0 0% 7%;
+    --card-foreground: 43 34% 91%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 43 34% 91%;
+    --primary: 43 34% 91%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 60 2% 16%;
+    --secondary-foreground: 43 34% 91%;
+    --muted: 40 2% 23%;
+    --muted-foreground: 48 3% 46%;
+    --accent: 36 6% 75%;
+    --accent-foreground: 0 0% 7%;
+    --destructive: 0 62.8% 50.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 60 2% 16%;
+    --input: 60 2% 16%;
+    --ring: 43 34% 91%;
+    --surface: 0 0% 7%;
+    --surface-foreground: 43 34% 91%;
+    --panel: 0 0% 7%;
+    --panel-foreground: 43 34% 91%;
+    --inverse: 43 34% 91%;
+    --inverse-foreground: 0 0% 7%;
+    --line: 60 2% 16%;
+    --workbench-grid: rgba(240, 236, 224, 0.1);
+    --workbench-map-overlay: linear-gradient(
+      135deg,
+      rgba(23, 23, 23, 0.88),
+      rgba(42, 42, 40, 0.46)
+    );
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    min-height: 100vh;
+  }
+}
