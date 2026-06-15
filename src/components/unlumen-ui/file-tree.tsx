@@ -166,11 +166,11 @@ function FolderIcon({
   const { isOpen } = useFolder();
 
   return (
-    <span className="inline-flex shrink-0 relative size-[1.125rem]">
+    <span className="relative inline-flex size-3.5 shrink-0 items-center justify-center">
       <AnimatePresence initial={false} mode="popLayout">
         <motion.span
           key={isOpen ? "open" : "close"}
-          className="inline-flex"
+          className="inline-flex items-center justify-center"
           initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
           exit={{ scale: 0.5, opacity: 0, rotate: 15 }}
@@ -223,13 +223,13 @@ function FileTreeFile({ node }: { node: FileTreeElement }) {
     >
       <div
         className={cn(
-          "pointer-events-none flex items-center gap-2 p-2 text-sm font-normal text-foreground",
+          "pointer-events-none flex items-center gap-1.5 p-1.5 text-xs font-normal text-foreground",
           node.highlight && "text-foreground",
         )}
       >
         {showIcons && (
-          <span className="inline-flex shrink-0 text-muted-foreground">
-            <Icon className="size-4" />
+          <span className="inline-flex size-3.5 shrink-0 items-center justify-center">
+            <Icon className="size-3.5" />
           </span>
         )}
         <span>{node.name}</span>
@@ -254,11 +254,11 @@ function FileTreeFolder({ node }: { node: FileTreeElement }) {
             ref={highlightTarget.ref}
             onMouseEnter={highlightTarget.onMouseEnter}
           >
-            <div className="pointer-events-none flex items-center gap-2 p-2 text-sm font-normal text-foreground">
+            <div className="pointer-events-none flex items-center gap-1.5 p-1.5 text-xs font-normal text-foreground">
               {showIcons && (
                 <FolderIcon
-                  closeIcon={<Folder className="size-4 text-muted-foreground" />}
-                  openIcon={<FolderOpen className="size-4 text-muted-foreground" />}
+                  closeIcon={<Folder className="size-3.5" />}
+                  openIcon={<FolderOpen className="size-3.5" />}
                 />
               )}
               <span>{node.name}</span>
@@ -334,7 +334,7 @@ export function FileTree({
       >
         <div
           ref={containerRef}
-          className="p-2 w-full relative isolate"
+          className="relative isolate w-full p-1"
           onMouseLeave={() => setHighlightBounds(null)}
         >
           <FileTreeHoverHighlight className="bg-accent/15 z-0" />
