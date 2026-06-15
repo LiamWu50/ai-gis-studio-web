@@ -35,17 +35,11 @@
     --inverse: 0 0% 7%;
     --inverse-foreground: 43 34% 91%;
     --line: 38 18% 78%;
-    --workbench-grid: rgba(23, 23, 23, 0.12);
-    --workbench-map-overlay: linear-gradient(
-      135deg,
-      rgba(240, 236, 224, 0.88),
-      rgba(194, 188, 179, 0.24)
-    );
     --radius: 0;
   }
 
   .dark {
-    --background: 0 0% 7%;
+    --background: 0 0% 6%;
     --foreground: 43 34% 91%;
     --card: 0 0% 7%;
     --card-foreground: 43 34% 91%;
@@ -71,12 +65,6 @@
     --inverse: 43 34% 91%;
     --inverse-foreground: 0 0% 7%;
     --line: 60 2% 16%;
-    --workbench-grid: rgba(240, 236, 224, 0.1);
-    --workbench-map-overlay: linear-gradient(
-      135deg,
-      rgba(23, 23, 23, 0.88),
-      rgba(42, 42, 40, 0.46)
-    );
   }
 
   * {

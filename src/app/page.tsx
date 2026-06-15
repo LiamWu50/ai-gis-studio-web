@@ -1,15 +1,21 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 
 import { ChatDock } from "@/features/chat/components/chat-dock";
 import { BottomChatInput } from "@/features/chat/components/input/bottom-chat-input";
 import { chatMessages } from "@/features/chat/data/messages";
-import { MapCanvas } from "@/features/map";
-import { LayerPanel } from "@/features/map/components/layer-panel";
-import { mapLayers } from "@/features/map/data/layers";
+import { LayerPanel } from "@/features/layers";
 import { LeftToolbar } from "@/features/sessions/components/left-toolbar";
 import { toolbarActions } from "@/features/sessions/data/toolbar-actions";
+
+const MapContainer = dynamic(
+  () => import("@/features/map").then((mod) => mod.MapContainer),
+  {
+    ssr: false
+  }
+);
 
 export default function HomePage() {
   const [isChatOpen, setIsChatOpen] = useState(true);
@@ -18,8 +24,8 @@ export default function HomePage() {
     <main className="relative h-screen overflow-hidden bg-background text-foreground">
       <section className="relative flex h-full">
         <div className="relative flex-1 overflow-hidden">
-          <MapCanvas />
-          <LayerPanel layers={mapLayers} />
+          <MapContainer />
+          <LayerPanel />
           <LeftToolbar actions={toolbarActions} />
 
           <div className="absolute inset-x-0 top-0 flex justify-center p-6">

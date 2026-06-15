@@ -8,12 +8,10 @@ import {
   destroyViewer,
   initializeViewer
 } from "@/features/map/helpers/cesium-scene-helper";
-import { loadWorkbenchScene } from "@/features/map/helpers/workbench-scene-helper";
 
-export function MapCanvas() {
+export function MapContainer() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<Viewer | null>(null);
-  const cleanupRef = useRef<(() => void) | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -32,7 +30,6 @@ export function MapCanvas() {
       }
 
       viewerRef.current = viewer;
-      cleanupRef.current = loadWorkbenchScene(viewer);
       setLoaded(true);
     };
 
@@ -40,8 +37,6 @@ export function MapCanvas() {
 
     return () => {
       cancelled = true;
-      cleanupRef.current?.();
-      cleanupRef.current = null;
       destroyViewer(viewerRef.current);
       viewerRef.current = null;
     };

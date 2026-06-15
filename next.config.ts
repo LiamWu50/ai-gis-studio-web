@@ -4,7 +4,16 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["cesium"],
   env: {
-    CESIUM_BASE_URL: "/cesium"
+    CESIUM_BASE_URL: "/cesium/"
+  },
+  webpack: (config, { webpack }) => {
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        CESIUM_BASE_URL: JSON.stringify("/cesium/")
+      })
+    );
+
+    return config;
   }
 };
 
