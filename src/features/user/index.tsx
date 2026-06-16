@@ -8,7 +8,7 @@ const User = () => {
     <div className="absolute bottom-3 left-3">
       <Button
         size="icon"
-        className="bg-background text-foreground hover:bg-muted [&_svg]:size-5"
+        className="bg-background text-foreground hover:bg-muted [&_svg]:size-4"
       >
         <UserRoundCog strokeWidth={1.75} />
       </Button>

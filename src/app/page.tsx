@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 
 import { ChatPanel } from "@/features/chat/chat-panel";
+import DataSourcePanel from "@/features/data-source";
 import SimpleChat from "@/features/chat/simple-chat";
 import LayerPanel from "@/features/layers";
 import User from "@/features/user";
@@ -26,6 +27,7 @@ export default function HomePage() {
         <div className="relative flex-1 overflow-hidden">
           <MapContainer />
           <LayerPanel />
+          <DataSourcePanel />
           <Setting />
           <User />
           <SimpleChat isVisible={!isChatOpen} onSubmit={openChatPanel} />

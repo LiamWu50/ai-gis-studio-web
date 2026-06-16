@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "@assistant-ui/react": "0.14.18",
+    "@radix-ui/react-dialog": "^1.1.17",
     "@radix-ui/react-label": "^2.1.9",
     "@radix-ui/react-separator": "^1.1.9",
     "@radix-ui/react-slot": "1.2.5",
+    "@radix-ui/react-tooltip": "^1.2.10",
     "ai": "6.0.202",
     "cesium": "1.142.0",
     "class-variance-authority": "0.7.1",

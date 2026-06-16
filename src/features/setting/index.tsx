@@ -8,7 +8,7 @@ const Setting = () => {
     <div className="absolute bottom-14 left-3">
       <Button
         size="icon"
-        className="bg-background text-foreground hover:bg-muted [&_svg]:size-5"
+        className="bg-background text-foreground hover:bg-muted [&_svg]:size-4"
       >
         <Settings />
       </Button>

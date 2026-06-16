@@ -1,6 +1,7 @@
 import { Send, Sparkles } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 type SimpleChatProps = {
   isVisible: boolean;
@@ -10,14 +11,13 @@ type SimpleChatProps = {
 const SimpleChat = ({ isVisible, onSubmit }: SimpleChatProps) => {
   return (
     <div
-      className={`fixed bottom-6 left-1/2 z-50 w-[320px] -translate-x-1/2 transition-all duration-300 ease-out ${
-        isVisible
-          ? "translate-y-0 opacity-100"
-          : "pointer-events-none translate-y-3 opacity-0"
-      }`}
+      className={cn(
+        "fixed bottom-3 left-1/2 z-50 w-[320px] -translate-x-1/2 transition-opacity duration-200",
+        isVisible ? "opacity-100" : "pointer-events-none opacity-0"
+      )}
     >
       <div className="relative">
-        <Sparkles className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-foreground" />
+        <Sparkles className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground" />
         <Input
           id="input-demo-api-key"
           type="text"
