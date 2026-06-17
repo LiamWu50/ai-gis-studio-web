@@ -7,15 +7,14 @@ import {
   Ion,
   Math as CesiumMath,
   ScreenSpaceEventHandler,
+  UrlTemplateImageryProvider,
   Viewer,
-  WebMapTileServiceImageryProvider
 } from "cesium";
 
 let cesiumCssLoaded = false;
 
 const CesiumdAccessToken =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1YjcxY2U3MC0yNjZlLTQ0YTYtODk5Ny04NTMyNDQ2YTA2YjQiLCJpZCI6MzAwNTg5LCJpYXQiOjE3NDY2ODczMTh9.tXD9wJq-1eH_z0-85mXAn7JTybBYJi9u1Ljqk1nzGdk";
-const TdMapAccessToken = "c41de38ace0497e639d4f2ed1eca9038";
 const CesiumBaseUrl = "/cesium/";
 
 if (typeof window !== "undefined") {
@@ -112,38 +111,25 @@ const CesiumSceneHelper = new (class {
       viewer.resolutionScale = vtxfDpr;
     }
 
-    this.addTdtImageryProvider(viewer);
+    this.addGoogleImageryProvider(viewer);
     this.resetView();
 
     return viewer;
   }
 
-  private addTdtImageryProvider(viewer: Viewer) {
-    const tdtImageryProvider = new WebMapTileServiceImageryProvider({
-      url: `https://t0.tianditu.gov.cn/cia_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=cia&tileMatrixSet=w&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&style=default&format=tiles&tk=${TdMapAccessToken}`,
-      layer: "tdtBasicLayer",
-      style: "default",
-      format: "image/jpeg",
-      tileMatrixSetID: "GoogleMapsCompatible"
+  private addGoogleImageryProvider(viewer: Viewer) {
+    const googleImageryProvider = new UrlTemplateImageryProvider({
+      url: "https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+      subdomains: ["0", "1", "2", "3"],
+      maximumLevel: 20,
+      credit: "Google"
     });
-    viewer.imageryLayers.addImageryProvider(tdtImageryProvider);
+    viewer.imageryLayers.addImageryProvider(googleImageryProvider);
   }
 
   private getInitOptions() {
     return {
-      // baseLayer: new ImageryLayer(
-      //   new WebMapTileServiceImageryProvider({
-      //     url: `https://t0.tianditu.gov.cn/img_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=img&tileMatrixSet=w&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&style=default&format=tiles&tk=${TdMapAccessToken}`,
-      //     layer: "tdtBasicLayer",
-      //     style: "default",
-      //     format: "image/jpeg",
-      //     maximumLevel: 18,
-      //     tileMatrixSetID: "GoogleMapsCompatible"
-      //   }),
-      //   {
-      //     brightness: 1.65
-      //   }
-      // ),
+      baseLayer: false as const,
       geocoder: false,
       homeButton: false,
       sceneModePicker: false,
