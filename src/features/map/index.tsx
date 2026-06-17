@@ -1,46 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-import type { Viewer } from "cesium";
-
-import {
-  destroyViewer,
-  initializeViewer
-} from "@/features/map/helpers/cesium-scene-helper";
+import { useRef } from "react";
+import { useCesiumViewer } from "./hooks/use-cesium-viewer";
 
 export function MapContainer() {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const viewerRef = useRef<Viewer | null>(null);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    if (!containerRef.current) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const setupViewer = async () => {
-      const viewer = await initializeViewer(containerRef.current as HTMLElement);
-
-      if (cancelled) {
-        destroyViewer(viewer);
-        return;
-      }
-
-      viewerRef.current = viewer;
-      setLoaded(true);
-    };
-
-    void setupViewer();
-
-    return () => {
-      cancelled = true;
-      destroyViewer(viewerRef.current);
-      viewerRef.current = null;
-    };
-  }, []);
+  const { loaded } = useCesiumViewer(containerRef);
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-secondary">

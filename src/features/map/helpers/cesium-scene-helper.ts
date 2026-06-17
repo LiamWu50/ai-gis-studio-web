@@ -4,7 +4,6 @@ import {
   Color,
   defined,
   FeatureDetection,
-  ImageryLayer,
   Ion,
   Math as CesiumMath,
   ScreenSpaceEventHandler,

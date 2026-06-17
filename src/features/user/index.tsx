@@ -1,109 +1,46 @@
 "use client";
 
-import { useState } from "react";
-
-import { useAuthSession } from "@/features/user/hooks/use-auth-session";
 import { LoginDialog } from "@/features/user/components/login-dialog";
 import { SignOutConfirmDialog } from "@/features/user/components/sign-out-confirm-dialog";
 import { UserAccountPopover } from "@/features/user/components/user-account-popover";
 import { UserMenuButton } from "@/features/user/components/user-menu-button";
 import { UserProfileDialog } from "@/features/user/components/user-profile-dialog";
-import type { UpdateUserProfileRequest } from "@/services/auth";
+import { useUserMenuController } from "./hooks/use-user-menu-controller";
 
 const User = () => {
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const {
-    user,
-    error,
-    profileError,
-    isInitializing,
-    isLoggedIn,
-    isSubmitting,
-    isUpdatingProfile,
-    login,
-    logout,
-    updateProfile
-  } = useAuthSession();
-
-  const handleUserClick = () => {
-    if (!isLoggedIn || !user) {
-      setIsLoginOpen(true);
-      setIsAccountMenuOpen(false);
-      return;
-    }
-
-    setIsAccountMenuOpen((open) => !open);
-  };
-
-  const handleLogin = async (username: string, password: string) => {
-    await login(username, password);
-    setIsLoginOpen(false);
-    setIsAccountMenuOpen(true);
-  };
-
-  const handleRequestSignOut = () => {
-    setIsAccountMenuOpen(false);
-    setIsSignOutConfirmOpen(true);
-  };
-
-  const handleOpenSettings = () => {
-    setIsAccountMenuOpen(false);
-    setIsProfileOpen(true);
-  };
-
-  const handleUpdateProfile = async (payload: UpdateUserProfileRequest) => {
-    await updateProfile(payload);
-    setIsProfileOpen(false);
-  };
-
-  const handleConfirmSignOut = async () => {
-    setIsSigningOut(true);
-
-    try {
-      await logout();
-      setIsAccountMenuOpen(false);
-      setIsLoginOpen(false);
-      setIsSignOutConfirmOpen(false);
-    } finally {
-      setIsSigningOut(false);
-    }
-  };
+  const controller = useUserMenuController();
 
   return (
     <div className="absolute bottom-3 left-3">
-      {user ? (
+      {controller.user ? (
         <UserAccountPopover
-          open={isAccountMenuOpen}
-          user={user}
-          onOpenSettings={handleOpenSettings}
-          onSignOut={handleRequestSignOut}
+          open={controller.isAccountMenuOpen}
+          user={controller.user}
+          onOpenSettings={controller.handleOpenSettings}
+          onSignOut={controller.handleRequestSignOut}
         />
       ) : null}
-      <UserMenuButton onClick={handleUserClick} />
+      <UserMenuButton onClick={controller.handleUserClick} />
       <LoginDialog
-        error={error}
-        isSubmitting={isInitializing || isSubmitting}
-        open={isLoginOpen}
-        onLogin={handleLogin}
-        onOpenChange={setIsLoginOpen}
+        error={controller.error}
+        isSubmitting={controller.isLoginSubmitting}
+        open={controller.isLoginOpen}
+        onLogin={controller.handleLogin}
+        onOpenChange={controller.setIsLoginOpen}
       />
       <SignOutConfirmDialog
-        open={isSignOutConfirmOpen}
-        isSubmitting={isSigningOut}
-        onConfirm={handleConfirmSignOut}
-        onOpenChange={setIsSignOutConfirmOpen}
+        open={controller.isSignOutConfirmOpen}
+        isSubmitting={controller.isSigningOut}
+        onConfirm={controller.handleConfirmSignOut}
+        onOpenChange={controller.setIsSignOutConfirmOpen}
       />
       <UserProfileDialog
-        open={isProfileOpen}
-        user={user}
-        error={profileError}
-        isSubmitting={isUpdatingProfile}
-        onSubmit={handleUpdateProfile}
-        onOpenChange={setIsProfileOpen}
+        open={controller.isProfileOpen}
+        user={controller.user}
+        error={controller.profileError}
+        isSubmitting={controller.isProfileSubmitting}
+        onSubmit={controller.handleUpdateProfile}
+        onOpenChange={controller.setIsProfileOpen}
       />
     </div>
   );
