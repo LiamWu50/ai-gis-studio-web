@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { FileTreeElement } from "@/components/unlumen-ui/file-tree";
 import { DEFAULT_OPEN_FOLDER_IDS, LAYER_ELEMENTS } from "../layer-data";
+import { useLayerWorkspace } from "../layer-workspace";
 
 const filterLayerElements = (
   elements: FileTreeElement[],
@@ -35,10 +36,24 @@ const getFolderIds = (elements: FileTreeElement[]): string[] =>
 
 export function useLayerTree() {
   const [searchValue, setSearchValue] = useState("");
+  const { userLayerElements } = useLayerWorkspace();
+
+  const layerElements = useMemo(
+    () =>
+      LAYER_ELEMENTS.map((element) =>
+        element.id === "user-layers"
+          ? {
+              ...element,
+              children: userLayerElements,
+            }
+          : element,
+      ),
+    [userLayerElements],
+  );
 
   const filteredElements = useMemo(
-    () => filterLayerElements(LAYER_ELEMENTS, searchValue),
-    [searchValue],
+    () => filterLayerElements(layerElements, searchValue),
+    [layerElements, searchValue],
   );
 
   const defaultOpenIds = useMemo(

@@ -1,11 +1,13 @@
 "use client";
 
 import { useRef } from "react";
+import { useLayerWorkspace } from "@/features/layers/layer-workspace";
 import { useCesiumViewer } from "./hooks/use-cesium-viewer";
 
 export function MapContainer() {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const { loaded } = useCesiumViewer(containerRef);
+  const { registerViewer } = useLayerWorkspace();
+  const { loaded } = useCesiumViewer(containerRef, registerViewer);
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-secondary">

@@ -9,6 +9,7 @@ type LayerPanelContentProps = {
   searchValue: string;
   filteredElements: FileTreeElement[];
   defaultOpenIds: string[];
+  onAddLayerClick: () => void;
   onSearchChange: (value: string) => void;
 };
 
@@ -17,6 +18,7 @@ export function LayerPanelContent({
   searchValue,
   filteredElements,
   defaultOpenIds,
+  onAddLayerClick,
   onSearchChange,
 }: LayerPanelContentProps) {
   return (
@@ -29,7 +31,7 @@ export function LayerPanelContent({
           : "pointer-events-none -translate-x-2 scale-95 opacity-0",
       )}
     >
-      <LayerPanelHeader />
+      <LayerPanelHeader onAddLayerClick={onAddLayerClick} />
       <LayerSearch value={searchValue} onChange={onSearchChange} />
       <LayerTree
         elements={filteredElements}

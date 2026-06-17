@@ -39,6 +39,12 @@ export function useDatasetsTable({
     return filteredDatasets.map((dataset) => toDatasetRow(dataset, readyStatus));
   }, [readyStatus, searchKeyword, tableDatasets]);
 
+  const selectedDataset = useMemo(
+    () =>
+      datasets.find((dataset) => dataset.datasetId === selectedRowId) ?? null,
+    [datasets, selectedRowId],
+  );
+
   const applyDatasets = useCallback(
     (nextDatasets: InputDataSummary[]) => {
       setDatasets(nextDatasets);
@@ -110,6 +116,7 @@ export function useDatasetsTable({
     loadDatasets,
     rows,
     searchKeyword,
+    selectedDataset,
     selectedRowId,
     setSearchKeyword,
     setSelectedRowId,

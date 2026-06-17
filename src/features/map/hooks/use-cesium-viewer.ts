@@ -7,6 +7,7 @@ import {
 
 export function useCesiumViewer(
   containerRef: React.RefObject<HTMLDivElement | null>,
+  onViewerChange?: (viewer: Viewer | null) => void,
 ) {
   const viewerRef = useRef<Viewer | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -27,6 +28,7 @@ export function useCesiumViewer(
       }
 
       viewerRef.current = viewer;
+      onViewerChange?.(viewer);
       setLoaded(true);
     };
 
@@ -34,10 +36,11 @@ export function useCesiumViewer(
 
     return () => {
       cancelled = true;
+      onViewerChange?.(null);
       destroyViewer(viewerRef.current);
       viewerRef.current = null;
     };
-  }, [containerRef]);
+  }, [containerRef, onViewerChange]);
 
   return {
     loaded,

@@ -5,6 +5,13 @@ import LocalData from "../modules/local-data";
 import OnlineData from "../modules/online-data";
 import OnlineService from "../modules/online-service";
 
+export type DataSourceDialogMode = "manage" | "select-layer";
+
+export type DataSourceModuleProps = {
+  mode?: DataSourceDialogMode;
+  onLayerSelected?: () => void;
+};
+
 export const DATA_SOURCE_MODULES = [
   { id: "local-data", label: "本地数据", icon: Database, component: LocalData },
   { id: "online-data", label: "在线数据", icon: Cloud, component: OnlineData },

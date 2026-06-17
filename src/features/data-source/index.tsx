@@ -26,7 +26,11 @@ const DataSourcePanel = () => {
         <Database strokeWidth={1.75} />
       </Button>
 
-      <DataSourceDialog isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <DataSourceDialog
+        isOpen={isOpen}
+        mode="manage"
+        onClose={() => setIsOpen(false)}
+      />
     </div>
   );
 };

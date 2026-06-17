@@ -11,6 +11,7 @@ import {
   SquareDashedMousePointer,
   Tags,
   TrafficCone,
+  UserRound,
 } from "lucide-react";
 
 export const LAYER_ELEMENTS: FileTreeElement[] = [
@@ -37,6 +38,13 @@ export const LAYER_ELEMENTS: FileTreeElement[] = [
     ],
   },
   {
+    id: "user-layers",
+    name: "用户图层",
+    type: "folder",
+    icon: UserRound,
+    children: [],
+  },
+  {
     id: "analysis-layers",
     name: "分析结果",
     type: "folder",
@@ -48,4 +56,8 @@ export const LAYER_ELEMENTS: FileTreeElement[] = [
   },
 ];
 
-export const DEFAULT_OPEN_FOLDER_IDS = ["basemap", "business-layers"];
+export const DEFAULT_OPEN_FOLDER_IDS = [
+  "basemap",
+  "business-layers",
+  "user-layers",
+];
