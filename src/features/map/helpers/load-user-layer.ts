@@ -4,6 +4,7 @@ import {
   type DataSource,
   type Viewer,
 } from "cesium";
+import { getDatasetPreview } from "@/services/gis-data";
 import type { InputDataSummary } from "@/types/agent";
 
 export type LoadUserLayerResult =
@@ -49,7 +50,8 @@ export const loadUserLayerToMap = async (
     return { status: "loaded", dataSource: existingDataSource };
   }
 
-  const dataSource = await GeoJsonDataSource.load(dataset.dataRef, {
+  const preview = await getDatasetPreview(dataset.datasetId, 1000);
+  const dataSource = await GeoJsonDataSource.load(preview.data, {
     clampToGround: true,
   });
   dataSource.name = getLayerDataSourceName(dataset);

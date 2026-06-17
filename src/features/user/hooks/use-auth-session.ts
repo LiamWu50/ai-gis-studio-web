@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import {
   AuthError,
@@ -30,7 +39,23 @@ const removeStoredToken = () => {
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
 };
 
-export const useAuthSession = () => {
+type AuthSessionContextValue = {
+  accessToken: string | null;
+  user: UserProfile | null;
+  error: string | null;
+  profileError: string | null;
+  isLoggedIn: boolean;
+  isInitializing: boolean;
+  isSubmitting: boolean;
+  isUpdatingProfile: boolean;
+  login: (username: string, password: string) => Promise<UserProfile>;
+  logout: () => Promise<void>;
+  updateProfile: (payload: UpdateUserProfileRequest) => Promise<UserProfile>;
+};
+
+const AuthSessionContext = createContext<AuthSessionContextValue | null>(null);
+
+const useAuthSessionState = (): AuthSessionContextValue => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +184,7 @@ export const useAuthSession = () => {
 
   return useMemo(
     () => ({
+      accessToken,
       user,
       error,
       profileError,
@@ -171,6 +197,7 @@ export const useAuthSession = () => {
       updateProfile
     }),
     [
+      accessToken,
       error,
       isInitializing,
       isSubmitting,
@@ -182,4 +209,24 @@ export const useAuthSession = () => {
       user
     ]
   );
+};
+
+export function AuthSessionProvider({ children }: { children: ReactNode }) {
+  const session = useAuthSessionState();
+
+  return createElement(
+    AuthSessionContext.Provider,
+    { value: session },
+    children,
+  );
+}
+
+export const useAuthSession = () => {
+  const context = useContext(AuthSessionContext);
+
+  if (!context) {
+    throw new Error("useAuthSession must be used within AuthSessionProvider");
+  }
+
+  return context;
 };

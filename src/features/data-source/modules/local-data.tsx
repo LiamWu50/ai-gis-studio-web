@@ -48,6 +48,12 @@ const LocalData = ({
         description: layer.loadMessage,
         variant: layer.loadStatus === "failed" ? "error" : "warning",
       });
+    } catch (error) {
+      toast({
+        title: "图层添加失败",
+        description: error instanceof Error ? error.message : "请稍后重试",
+        variant: "error",
+      });
     } finally {
       setIsAddingLayer(false);
     }

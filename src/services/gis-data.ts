@@ -6,6 +6,22 @@ type DatasetListResponse = {
   datasets: InputDataSummary[];
 };
 
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
+export type DatasetPreviewResponse = {
+  datasetId: string;
+  bbox: [number, number, number, number] | null;
+  featureCount: number | null;
+  returnedFeatureCount: number;
+  data: JsonValue;
+};
+
 const datasetUrl = (path = "") => `${API_BASE_PATH}/datasets${path}`;
 
 const readErrorMessage = async (response: Response) => {
@@ -39,6 +55,19 @@ export const getDataset = async (datasetId: string) => {
 
   await assertOk(response);
   return (await response.json()) as InputDataSummary;
+};
+
+export const getDatasetPreview = async (datasetId: string, limit = 1000) => {
+  const searchParams = new URLSearchParams({ limit: String(limit) });
+  const response = await fetch(
+    datasetUrl(`/${encodeURIComponent(datasetId)}/preview?${searchParams}`),
+    {
+      cache: "no-store",
+    },
+  );
+
+  await assertOk(response);
+  return (await response.json()) as DatasetPreviewResponse;
 };
 
 export const registerDatasetFromUrl = async (url: string, name?: string) => {
