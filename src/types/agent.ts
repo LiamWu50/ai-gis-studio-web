@@ -31,20 +31,31 @@ export type PlanStep = {
 export type InputDataSummary = {
   datasetId: string;
   name: string;
-  sourceType: "upload" | "sample" | "map_service";
-  geometryType?: "Point" | "LineString" | "Polygon" | "Mixed";
-  crs?: string;
-  featureCount?: number;
-  bbox?: [number, number, number, number];
+  sourceType: "upload" | "url" | "database" | "sample" | "map_service";
+  geometryType?:
+    | "Point"
+    | "LineString"
+    | "Polygon"
+    | "MultiPoint"
+    | "MultiLineString"
+    | "MultiPolygon"
+    | "Mixed"
+    | "Raster"
+    | null;
+  crs?: string | null;
+  featureCount?: number | null;
+  bbox?: [number, number, number, number] | null;
   fields: FieldSummary[];
   warnings: string[];
+  dataRef: string;
 };
 
 export type FieldSummary = {
   name: string;
   type: "string" | "number" | "boolean" | "date" | "unknown";
   sampleValues?: string[];
-  nullRatio?: number;
+  nullRatio?: number | null;
+  uniqueCount?: number | null;
 };
 
 export type MapLayerResult = {

@@ -14,33 +14,33 @@ export function MapContainer() {
   const viewerRef = useRef<Viewer | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  // useEffect(() => {
-  //   if (!containerRef.current) {
-  //     return;
-  //   }
+  useEffect(() => {
+    if (!containerRef.current) {
+      return;
+    }
 
-  //   let cancelled = false;
+    let cancelled = false;
 
-  //   const setupViewer = async () => {
-  //     const viewer = await initializeViewer(containerRef.current as HTMLElement);
+    const setupViewer = async () => {
+      const viewer = await initializeViewer(containerRef.current as HTMLElement);
 
-  //     if (cancelled) {
-  //       destroyViewer(viewer);
-  //       return;
-  //     }
+      if (cancelled) {
+        destroyViewer(viewer);
+        return;
+      }
 
-  //     viewerRef.current = viewer;
-  //     setLoaded(true);
-  //   };
+      viewerRef.current = viewer;
+      setLoaded(true);
+    };
 
-  //   void setupViewer();
+    void setupViewer();
 
-  //   return () => {
-  //     cancelled = true;
-  //     destroyViewer(viewerRef.current);
-  //     viewerRef.current = null;
-  //   };
-  // }, []);
+    return () => {
+      cancelled = true;
+      destroyViewer(viewerRef.current);
+      viewerRef.current = null;
+    };
+  }, []);
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-secondary">
