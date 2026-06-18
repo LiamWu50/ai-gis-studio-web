@@ -68,9 +68,7 @@ function ChatMessage() {
                 <div>
                   <MarkdownMessagePart />
                   <MessagePartPrimitive.InProgress>
-                    <span className="ml-0.5 animate-pulse text-muted-foreground">
-                      ...
-                    </span>
+                    <AssistantTypingIndicator />
                   </MessagePartPrimitive.InProgress>
                 </div>
               );
@@ -82,6 +80,20 @@ function ChatMessage() {
         </div>
       </MessagePrimitive.If>
     </MessagePrimitive.Root>
+  );
+}
+
+function AssistantTypingIndicator() {
+  return (
+    <span
+      aria-label="AI 正在生成回复"
+      className="ml-0.5 inline-flex translate-y-px items-center gap-0.5"
+      role="status"
+    >
+      <span className="h-1 w-1 animate-[typing-dot_1.2s_ease-in-out_infinite] bg-foreground/70" />
+      <span className="h-1 w-1 animate-[typing-dot_1.2s_ease-in-out_0.15s_infinite] bg-foreground/55" />
+      <span className="h-1 w-1 animate-[typing-dot_1.2s_ease-in-out_0.3s_infinite] bg-foreground/40" />
+    </span>
   );
 }
 
