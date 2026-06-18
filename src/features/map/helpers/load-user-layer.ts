@@ -1,9 +1,9 @@
 import {
-  GeoJsonDataSource,
   Rectangle,
   type DataSource,
   type Viewer,
 } from "cesium";
+import { GeoJsonLayerService } from "@/lib/cesium";
 import { getDatasetPreview } from "@/services/gis-data";
 import type { InputDataSummary } from "@/types/agent";
 
@@ -51,12 +51,19 @@ export const loadUserLayerToMap = async (
   }
 
   const preview = await getDatasetPreview(dataset.datasetId, 1000);
-  const dataSource = await GeoJsonDataSource.load(preview.data, {
+  if (!preview.data || typeof preview.data !== "object") {
+    return { status: "skipped", reason: "数据预览为空，无法上图" };
+  }
+
+  const service = new GeoJsonLayerService({
+    viewer,
+    id: getLayerDataSourceName(dataset),
+    name: dataset.name,
+  });
+  const { layer: dataSource } = await service.add({
+    data: preview.data,
     clampToGround: true,
   });
-  dataSource.name = getLayerDataSourceName(dataset);
-
-  await viewer.dataSources.add(dataSource);
   await flyToDataset(viewer, dataset, dataSource);
 
   return { status: "loaded", dataSource };
