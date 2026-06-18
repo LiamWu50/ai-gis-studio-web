@@ -15,9 +15,15 @@ export type AgentEvent =
     }
   | { type: "layer.created"; layer: MapLayerResult }
   | { type: "chart.created"; chart: ChartResult }
+  | { type: "map.command"; commandId: string; command: MapCommand; reason?: string }
   | { type: "scene.action"; action: ThreeSceneAction }
   | { type: "report.delta"; text: string }
-  | { type: "clarification"; question: string; missing: string[] }
+  | {
+      type: "clarification";
+      question: string;
+      missing: string[];
+      options?: ClarificationOption[];
+    }
   | { type: "error"; error: AgentError }
   | { type: "done"; payload: Record<string, unknown> };
 
@@ -73,6 +79,89 @@ export type MapLayerResult = {
   style?: Record<string, unknown>;
   legend?: Array<Record<string, unknown>>;
   metadata: Record<string, unknown>;
+};
+
+export type MapCommand =
+  | CameraFlyToCommand
+  | LayerAddDatasetCommand
+  | LayerSetVisibleCommand
+  | LayerSetOpacityCommand
+  | OverlayAddMarkerCommand
+  | MapClearTemporaryCommand;
+
+export type CameraFlyToCommand = {
+  action: "camera.flyTo";
+  target:
+    | {
+        kind: "place";
+        name: string;
+        center: [number, number];
+        bbox?: [number, number, number, number];
+        confidence?: number;
+      }
+    | { kind: "coordinate"; lon: number; lat: number; height?: number }
+    | { kind: "bbox"; bbox: [number, number, number, number] }
+    | { kind: "layer"; layerId: string }
+    | { kind: "dataset"; datasetId: string };
+  durationMs?: number;
+};
+
+export type LayerAddDatasetCommand = {
+  action: "layer.addDataset";
+  datasetId: string;
+  name?: string;
+  visible?: boolean;
+  opacity?: number;
+  flyTo?: boolean;
+};
+
+export type LayerSetVisibleCommand = {
+  action: "layer.setVisible";
+  layerId: string;
+  visible: boolean;
+};
+
+export type LayerSetOpacityCommand = {
+  action: "layer.setOpacity";
+  layerId: string;
+  opacity: number;
+};
+
+export type OverlayAddMarkerCommand = {
+  action: "overlay.addMarker";
+  id: string;
+  position: [number, number];
+  label?: string;
+  description?: string;
+  flyTo?: boolean;
+};
+
+export type MapClearTemporaryCommand = {
+  action: "map.clearTemporary";
+  target?: "markers" | "highlights" | "drawings" | "all";
+};
+
+export type MapCommandResult = {
+  ok: boolean;
+  action: MapCommand["action"];
+  message: string;
+};
+
+export type MapCommandError = {
+  code:
+    | "VIEWER_UNAVAILABLE"
+    | "DATASET_NOT_FOUND"
+    | "LAYER_NOT_FOUND"
+    | "UNSUPPORTED_COMMAND"
+    | "INVALID_COMMAND"
+    | "EXECUTION_FAILED";
+  message: string;
+  recoverable: boolean;
+};
+
+export type ClarificationOption = {
+  label: string;
+  value: string;
 };
 
 export type ToolCallRecord = {

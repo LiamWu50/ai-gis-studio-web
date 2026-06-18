@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { useChatInput } from "../hooks/use-chat-input";
 
 type SimpleChatInputProps = {
-  onSubmit: () => void;
+  onSubmit: (message: string) => void;
 };
 
 export function SimpleChatInput({ onSubmit }: SimpleChatInputProps) {
@@ -19,11 +19,11 @@ export function SimpleChatInput({ onSubmit }: SimpleChatInputProps) {
         value={input.value}
         onChange={(event) => input.setValue(event.target.value)}
         onKeyDown={input.handleKeyDown}
-        className="h-12 rounded-none bg-background pl-12 pr-12 font-light text-foreground shadow-md placeholder:font-light placeholder:text-foreground focus-visible:border-muted-foreground/40 focus-visible:ring-0"
+        className="h-12 border-none rounded-none bg-background pl-12 pr-12 font-light text-foreground shadow-md placeholder:font-light placeholder:text-foreground focus-visible:border-muted-foreground/40 focus-visible:ring-0"
       />
       <button
         className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center bg-foreground text-background transition-colors duration-200 ease-out hover:bg-foreground/80"
-        onClick={onSubmit}
+        onClick={input.submit}
         type="button"
         aria-label="发送消息并打开聊天面板"
       >

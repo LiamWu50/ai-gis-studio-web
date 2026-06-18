@@ -3,7 +3,7 @@ import { SimpleChatInput } from "./components/simple-chat-input";
 
 type SimpleChatProps = {
   isVisible: boolean;
-  onSubmit: () => void;
+  onSubmit: (message: string) => void;
 };
 
 const SimpleChat = ({ isVisible, onSubmit }: SimpleChatProps) => {

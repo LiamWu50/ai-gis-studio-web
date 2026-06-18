@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 type UseChatInputOptions = {
-  onSubmit: () => void;
+  onSubmit: (message: string) => void;
 };
 
 export function useChatInput({ onSubmit }: UseChatInputOptions) {
@@ -9,13 +9,26 @@ export function useChatInput({ onSubmit }: UseChatInputOptions) {
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
-      onSubmit();
+      const nextValue = value.trim();
+      if (!nextValue) return;
+
+      onSubmit(nextValue);
+      setValue("");
     }
+  };
+
+  const submit = () => {
+    const nextValue = value.trim();
+    if (!nextValue) return;
+
+    onSubmit(nextValue);
+    setValue("");
   };
 
   return {
     handleKeyDown,
     setValue,
+    submit,
     value,
   };
 }

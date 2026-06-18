@@ -30,13 +30,19 @@ import type { Viewer } from "cesium";
 import type { FileTreeElement } from "@/components/unlumen-ui/file-tree";
 import { loadUserLayerToMap } from "@/features/map/helpers/load-user-layer";
 import { useAuthSession } from "@/features/user/hooks/use-auth-session";
+import { MapCommandExecutor } from "@/lib/cesium/map-command";
 import {
   createDatasetLayer,
   deleteLayerTreeNode,
   getLayerTree,
   type LayerTreeNode,
 } from "@/services/user-layers";
-import type { InputDataSummary } from "@/types/agent";
+import { getDataset } from "@/services/gis-data";
+import type {
+  InputDataSummary,
+  MapCommand,
+  MapCommandResult,
+} from "@/types/agent";
 import { LAYER_ELEMENTS } from "./layer-data";
 
 export type UserLayerLoadStatus = "pending" | "loaded" | "skipped" | "failed";
@@ -51,8 +57,12 @@ export type UserLayer = {
 };
 
 type LayerWorkspaceContextValue = {
-  addUserLayerFromDataset: (dataset: InputDataSummary) => Promise<UserLayer>;
+  addUserLayerFromDataset: (
+    dataset: InputDataSummary,
+    options?: { name?: string; opacity?: number; visible?: boolean },
+  ) => Promise<UserLayer>;
   deleteUserLayer: (nodeId: string) => Promise<void>;
+  executeMapCommand: (command: MapCommand) => Promise<MapCommandResult>;
   layerElements: FileTreeElement[];
   registerViewer: (viewer: Viewer | null) => void;
   userLayers: UserLayer[];
@@ -236,6 +246,11 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
     null,
   );
   const [userLayers, setUserLayers] = useState<UserLayer[]>([]);
+  const userLayersRef = useRef<UserLayer[]>([]);
+
+  useEffect(() => {
+    userLayersRef.current = userLayers;
+  }, [userLayers]);
 
   const registerViewer = useCallback((viewer: Viewer | null) => {
     viewerRef.current = viewer;
@@ -275,18 +290,24 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
   }, [accessToken, isLoggedIn]);
 
   const addUserLayerFromDataset = useCallback(
-    async (dataset: InputDataSummary) => {
+    async (
+      dataset: InputDataSummary,
+      options?: { name?: string; opacity?: number; visible?: boolean },
+    ) => {
       if (!accessToken) {
         throw new Error("请先登录后再添加图层");
       }
 
       const node = await createDatasetLayer(accessToken, {
         datasetId: dataset.datasetId,
-        name: dataset.name,
-        visible: true,
-        opacity: 1,
+        name: options?.name ?? dataset.name,
+        visible: options?.visible ?? true,
+        opacity: options?.opacity ?? 1,
       });
-      const savedLayer = toUserLayer(node, dataset);
+      const savedLayer = toUserLayer(node, {
+        ...dataset,
+        name: options?.name ?? dataset.name,
+      });
 
       setLayerTreeNodes((currentNodes) =>
         currentNodes ? upsertNode(currentNodes, node) : currentNodes,
@@ -340,6 +361,20 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
     [accessToken],
   );
 
+  const executeMapCommand = useCallback(
+    (command: MapCommand) => {
+      const executor = new MapCommandExecutor({
+        getViewer: () => viewerRef.current,
+        getUserLayers: () => userLayersRef.current,
+        getDataset,
+        addUserLayerFromDataset,
+      });
+
+      return executor.execute(command);
+    },
+    [addUserLayerFromDataset],
+  );
+
   const layerElements = useMemo(
     () => {
       if (isLoggedIn && layerTreeNodes) {
@@ -364,6 +399,7 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
     () => ({
       addUserLayerFromDataset,
       deleteUserLayer,
+      executeMapCommand,
       layerElements,
       registerViewer,
       userLayers,
@@ -371,6 +407,7 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
     [
       addUserLayerFromDataset,
       deleteUserLayer,
+      executeMapCommand,
       layerElements,
       registerViewer,
       userLayers,

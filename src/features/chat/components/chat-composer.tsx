@@ -1,11 +1,15 @@
+import { ComposerPrimitive } from "@assistant-ui/react";
 import { ChevronDown, Send } from "lucide-react";
 
 export function ChatComposer() {
   return (
-    <div className="border border-input bg-background p-2 shadow-lg backdrop-blur">
-      <textarea
-        className="min-h-[48px] w-full resize-none bg-transparent text-xs font-normal leading-5 text-foreground outline-none placeholder:text-muted-foreground"
+    <ComposerPrimitive.Root className="border border-input bg-background p-2 shadow-lg backdrop-blur">
+      <ComposerPrimitive.Input
+        minRows={2}
+        maxRows={4}
+        className="max-h-24 min-h-10 w-full resize-none bg-transparent text-xs font-normal leading-5 text-foreground outline-none placeholder:text-muted-foreground"
         placeholder="提问......"
+        submitMode="enter"
       />
 
       <div className="mt-2 flex items-center justify-between">
@@ -20,14 +24,14 @@ export function ChatComposer() {
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
 
-        <button
+        <ComposerPrimitive.Send
           className="grid h-8 w-8 place-items-center bg-foreground text-background transition hover:opacity-80"
           aria-label="发送消息"
-          type="button"
+          type="submit"
         >
           <Send className="h-3.5 w-3.5 rotate-45" />
-        </button>
+        </ComposerPrimitive.Send>
       </div>
-    </div>
+    </ComposerPrimitive.Root>
   );
 }
