@@ -200,7 +200,7 @@ function LayerTreeItemActions({ node }: { node: FileTreeElement }) {
           )
         : null}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm border-0">
           <DialogHeader>
             <DialogTitle>删除图层</DialogTitle>
             <DialogDescription>
