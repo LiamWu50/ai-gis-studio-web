@@ -14,7 +14,7 @@ export function LayerSearch({ value, onChange }: LayerSearchProps) {
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="搜索图层"
-        className="h-full border-0 bg-transparent p-0 pl-2 text-xs leading-none shadow-none placeholder:text-[11px] focus-visible:ring-0"
+        className="h-full border-0 bg-transparent p-0 pl-2 text-xs leading-none shadow-none placeholder:text-[11px] focus-visible:ring-0 md:text-xs"
       />
     </div>
   );

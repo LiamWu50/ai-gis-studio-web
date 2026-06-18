@@ -28,13 +28,18 @@ export type FileTreeElement = {
   highlight?: boolean;
   /** Whether this folder starts expanded. */
   defaultOpen?: boolean;
+  /** Whether user-owned actions such as edit/delete are allowed. */
+  userManaged?: boolean;
 };
+
+export type FileTreeRenderActions = (node: FileTreeElement) => React.ReactNode;
 
 // ─── Context ───────────────────────────────────────────────────────────────────
 
 type FileTreeCtx = {
   indentSize: number;
   showIcons: boolean;
+  renderActions?: FileTreeRenderActions;
   defaultOpenIds: Set<string>;
   containerRef: React.RefObject<HTMLDivElement | null>;
   highlightBounds: HighlightBounds | null;
@@ -211,28 +216,40 @@ function FolderContent({ children }: { children: React.ReactNode }) {
 // ─── Node renderers ────────────────────────────────────────────────────────────
 
 function FileTreeFile({ node }: { node: FileTreeElement }) {
-  const { showIcons } = useFileTree();
-  const Icon = resolveFileIcon(node.name, node.icon);
-  const highlightTarget = useHighlightTarget();
+  const { renderActions, showIcons } = useFileTree();
+  const { ref, onMouseEnter } = useHighlightTarget();
+  const icon = showIcons
+    ? React.createElement(resolveFileIcon(node.name, node.icon), {
+        className: "size-3.5",
+      })
+    : null;
+  const actions = renderActions?.(node);
 
   return (
     <div
-      ref={highlightTarget.ref}
-      className="relative z-10"
-      onMouseEnter={highlightTarget.onMouseEnter}
+      ref={ref}
+      className="group relative z-10"
+      onMouseEnter={onMouseEnter}
     >
       <div
         className={cn(
-          "pointer-events-none flex items-center gap-1.5 p-1.5 text-xs font-normal text-foreground",
+          "flex items-center gap-1.5 p-1.5 text-xs font-normal text-foreground",
           node.highlight && "text-foreground",
         )}
       >
-        {showIcons && (
-          <span className="inline-flex size-3.5 shrink-0 items-center justify-center">
-            <Icon className="size-3.5" />
+        <div className="pointer-events-none flex min-w-0 flex-1 items-center gap-1.5">
+          {showIcons && (
+            <span className="inline-flex size-3.5 shrink-0 items-center justify-center">
+              {icon}
+            </span>
+          )}
+          <span className="truncate">{node.name}</span>
+        </div>
+        {actions ? (
+          <span className="ml-auto inline-flex shrink-0 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+            {actions}
           </span>
-        )}
-        <span>{node.name}</span>
+        ) : null}
       </div>
     </div>
   );
@@ -240,7 +257,7 @@ function FileTreeFile({ node }: { node: FileTreeElement }) {
 
 function FileTreeFolder({ node }: { node: FileTreeElement }) {
   const { defaultOpenIds, indentSize, showIcons } = useFileTree();
-  const highlightTarget = useHighlightTarget();
+  const { ref, onMouseEnter } = useHighlightTarget();
   const [isOpen, setIsOpen] = React.useState(
     node.defaultOpen ?? defaultOpenIds.has(node.id),
   );
@@ -251,8 +268,8 @@ function FileTreeFolder({ node }: { node: FileTreeElement }) {
       <div data-value={node.id} className="relative z-10">
         <button type="button" className="w-full text-start" onClick={toggle}>
           <div
-            ref={highlightTarget.ref}
-            onMouseEnter={highlightTarget.onMouseEnter}
+            ref={ref}
+            onMouseEnter={onMouseEnter}
           >
             <div className="pointer-events-none flex items-center gap-1.5 p-1.5 text-xs font-normal text-foreground">
               {showIcons && (
@@ -298,6 +315,8 @@ export type FileTreeProps = {
   showIcons?: boolean;
   /** Folder ids that should be open on first render. */
   defaultOpenIds?: string[];
+  /** Optional renderer for controls displayed at the end of file rows. */
+  renderActions?: FileTreeRenderActions;
 };
 
 export function FileTree({
@@ -306,6 +325,7 @@ export function FileTree({
   indentSize = 24,
   showIcons = true,
   defaultOpenIds = [],
+  renderActions,
 }: FileTreeProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [highlightBounds, setHighlightBounds] =
@@ -320,6 +340,7 @@ export function FileTree({
       value={{
         indentSize,
         showIcons,
+        renderActions,
         defaultOpenIds: defaultOpenIdSet,
         containerRef,
         highlightBounds,
@@ -328,7 +349,7 @@ export function FileTree({
     >
       <div
         className={cn(
-          "overflow-hidden",
+          "overflow-visible",
           className,
         )}
       >

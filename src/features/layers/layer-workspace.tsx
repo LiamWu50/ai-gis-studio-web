@@ -32,6 +32,7 @@ import { loadUserLayerToMap } from "@/features/map/helpers/load-user-layer";
 import { useAuthSession } from "@/features/user/hooks/use-auth-session";
 import {
   createDatasetLayer,
+  deleteLayerTreeNode,
   getLayerTree,
   type LayerTreeNode,
 } from "@/services/user-layers";
@@ -51,6 +52,7 @@ export type UserLayer = {
 
 type LayerWorkspaceContextValue = {
   addUserLayerFromDataset: (dataset: InputDataSummary) => Promise<UserLayer>;
+  deleteUserLayer: (nodeId: string) => Promise<void>;
   layerElements: FileTreeElement[];
   registerViewer: (viewer: Viewer | null) => void;
   userLayers: UserLayer[];
@@ -113,6 +115,7 @@ const toLayerTreeElement = (node: LayerTreeNode): FileTreeElement => ({
   name: node.name,
   type: node.type === "folder" ? "folder" : "file",
   icon: resolveLayerIcon(node.iconKey),
+  userManaged: node.userManaged,
   children: node.children.map(toLayerTreeElement),
 });
 
@@ -163,6 +166,17 @@ const upsertNode = (
 
   return appendNodeToParent(nodes, nextNode);
 };
+
+const removeNode = (
+  nodes: LayerTreeNode[],
+  nodeId: string,
+): LayerTreeNode[] =>
+  nodes
+    .filter((node) => node.id !== nodeId)
+    .map((node) => ({
+      ...node,
+      children: removeNode(node.children, nodeId),
+    }));
 
 const toFallbackDataset = (node: LayerTreeNode): InputDataSummary => ({
   datasetId: node.datasetId ?? node.id,
@@ -309,6 +323,23 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
     [accessToken],
   );
 
+  const deleteUserLayer = useCallback(
+    async (nodeId: string) => {
+      if (!accessToken) {
+        throw new Error("请先登录后再删除图层");
+      }
+
+      await deleteLayerTreeNode(accessToken, nodeId);
+      setLayerTreeNodes((currentNodes) =>
+        currentNodes ? removeNode(currentNodes, nodeId) : currentNodes,
+      );
+      setUserLayers((currentLayers) =>
+        currentLayers.filter((layer) => layer.id !== nodeId),
+      );
+    },
+    [accessToken],
+  );
+
   const layerElements = useMemo(
     () => {
       if (isLoggedIn && layerTreeNodes) {
@@ -332,11 +363,18 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       addUserLayerFromDataset,
+      deleteUserLayer,
       layerElements,
       registerViewer,
       userLayers,
     }),
-    [addUserLayerFromDataset, layerElements, registerViewer, userLayers],
+    [
+      addUserLayerFromDataset,
+      deleteUserLayer,
+      layerElements,
+      registerViewer,
+      userLayers,
+    ],
   );
 
   return (
