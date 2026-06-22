@@ -84,11 +84,12 @@ const LocalData = ({
               fileInputRef={upload.fileInputRef}
               isLoading={table.isLoading}
               isUploading={upload.isUploading}
+              lastUploadedFileName={upload.lastUploadedFileName}
               searchKeyword={table.searchKeyword}
+              uploadError={upload.uploadError}
               onFileChange={upload.uploadFile}
               onRefresh={() => void table.loadDatasets()}
               onSearchChange={table.setSearchKeyword}
-              onUploadClick={upload.openFilePicker}
             />
           )
         }

@@ -74,6 +74,8 @@ export function useLocalDatasetUpload({
   onUploaded,
 }: UseLocalDatasetUploadOptions) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [lastUploadedFileName, setLastUploadedFileName] = useState("");
+  const [uploadError, setUploadError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
   const resetFileInput = () => {
@@ -87,7 +89,11 @@ export function useLocalDatasetUpload({
   const uploadFile = async (file: File | undefined) => {
     if (!file) return;
 
+    setLastUploadedFileName("");
+    setUploadError("");
+
     if (file.size === 0 || !isSupportedFile(file)) {
+      setUploadError("请选择 GeoJSON 或 JSON 文件。");
       resetFileInput();
       return;
     }
@@ -101,8 +107,9 @@ export function useLocalDatasetUpload({
         getFileStem(file.name),
       );
       onUploaded(uploadedDataset);
-    } catch {
-      // 后续接入统一反馈组件时再展示上传错误。
+      setLastUploadedFileName(file.name);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "上传失败，请稍后重试。");
     } finally {
       setIsUploading(false);
       resetFileInput();
@@ -112,7 +119,9 @@ export function useLocalDatasetUpload({
   return {
     fileInputRef,
     isUploading,
+    lastUploadedFileName,
     openFilePicker,
+    uploadError,
     uploadFile,
   };
 }
