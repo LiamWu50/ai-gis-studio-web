@@ -12,12 +12,14 @@ import {
 } from "react";
 import {
   Activity,
+  Anchor,
   Building2,
   Camera,
   FileJson,
   Layers,
   Map as MapIcon,
   MapPinned,
+  Plane,
   Route,
   Satellite,
   SquareDashedMousePointer,
@@ -35,6 +37,7 @@ import {
   createDatasetLayer,
   deleteLayerTreeNode,
   getLayerTree,
+  updateLayerTreeNode,
   type LayerTreeNode,
 } from "@/services/user-layers";
 import { getDataset } from "@/services/gis-data";
@@ -63,8 +66,13 @@ type LayerWorkspaceContextValue = {
   ) => Promise<UserLayer>;
   deleteUserLayer: (nodeId: string) => Promise<void>;
   executeMapCommand: (command: MapCommand) => Promise<MapCommandResult>;
+  getViewer: () => Viewer | null;
   layerElements: FileTreeElement[];
   registerViewer: (viewer: Viewer | null) => void;
+  selectedLayerIds: string[];
+  setSelectedLayerIds: (layerIds: string[]) => void;
+  toggleLayerVisibility: (nodeId: string, visible: boolean) => Promise<void>;
+  toggleSelectedLayer: (layerId: string) => void;
   userLayers: UserLayer[];
 };
 
@@ -103,12 +111,14 @@ const toUserLayerElement = (layer: UserLayer): FileTreeElement => ({
 
 const iconByKey = {
   activity: Activity,
+  anchor: Anchor,
   building: Building2,
   "building-2": Building2,
   camera: Camera,
   layers: Layers,
   map: MapIcon,
   "map-pinned": MapPinned,
+  plane: Plane,
   route: Route,
   satellite: Satellite,
   "square-dashed-mouse-pointer": SquareDashedMousePointer,
@@ -126,6 +136,7 @@ const toLayerTreeElement = (node: LayerTreeNode): FileTreeElement => ({
   type: node.type === "folder" ? "folder" : "file",
   icon: resolveLayerIcon(node.iconKey),
   userManaged: node.userManaged,
+  visible: node.visible,
   children: node.children.map(toLayerTreeElement),
 });
 
@@ -246,6 +257,7 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
     null,
   );
   const [userLayers, setUserLayers] = useState<UserLayer[]>([]);
+  const [selectedLayerIds, setSelectedLayerIds] = useState<string[]>([]);
   const userLayersRef = useRef<UserLayer[]>([]);
 
   useEffect(() => {
@@ -254,6 +266,16 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
 
   const registerViewer = useCallback((viewer: Viewer | null) => {
     viewerRef.current = viewer;
+  }, []);
+
+  const getViewer = useCallback(() => viewerRef.current, []);
+
+  const toggleSelectedLayer = useCallback((layerId: string) => {
+    setSelectedLayerIds((currentLayerIds) =>
+      currentLayerIds.includes(layerId)
+        ? currentLayerIds.filter((currentLayerId) => currentLayerId !== layerId)
+        : [...currentLayerIds, layerId],
+    );
   }, []);
 
   useEffect(() => {
@@ -357,6 +379,39 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
       setUserLayers((currentLayers) =>
         currentLayers.filter((layer) => layer.id !== nodeId),
       );
+      setSelectedLayerIds((currentLayerIds) =>
+        currentLayerIds.filter((layerId) => layerId !== nodeId),
+      );
+    },
+    [accessToken],
+  );
+
+  const toggleLayerVisibility = useCallback(
+    async (nodeId: string, visible: boolean) => {
+      if (!accessToken) {
+        throw new Error("请先登录后再更新图层");
+      }
+
+      const updatedNode = await updateLayerTreeNode(accessToken, nodeId, {
+        visible,
+      });
+      setLayerTreeNodes((currentNodes) =>
+        currentNodes ? replaceNode(currentNodes, updatedNode) : currentNodes,
+      );
+      setUserLayers((currentLayers) =>
+        currentLayers.map((layer) =>
+          layer.id === updatedNode.id
+            ? { ...layer, node: updatedNode, name: updatedNode.name }
+            : layer,
+        ),
+      );
+
+      const dataSource = viewerRef.current?.dataSources
+        .getByName(`user-layer:${updatedNode.datasetId ?? updatedNode.id}`)
+        .at(0);
+      if (dataSource) {
+        dataSource.show = visible;
+      }
     },
     [accessToken],
   );
@@ -400,16 +455,25 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
       addUserLayerFromDataset,
       deleteUserLayer,
       executeMapCommand,
+      getViewer,
       layerElements,
       registerViewer,
+      selectedLayerIds,
+      setSelectedLayerIds,
+      toggleLayerVisibility,
+      toggleSelectedLayer,
       userLayers,
     }),
     [
       addUserLayerFromDataset,
       deleteUserLayer,
       executeMapCommand,
+      getViewer,
       layerElements,
       registerViewer,
+      selectedLayerIds,
+      toggleLayerVisibility,
+      toggleSelectedLayer,
       userLayers,
     ],
   );

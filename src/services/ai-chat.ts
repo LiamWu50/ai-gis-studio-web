@@ -1,3 +1,12 @@
+import type {
+  ChartResult,
+  ClarificationOption,
+  InputDataSummary,
+  MapCommand,
+  MapLayerResult,
+  PlanStep,
+} from "@/types/agent";
+
 const AI_CHAT_BASE_PATH = "/api/ai-chat";
 
 export type AiChatMessageRole = "user" | "assistant" | "system";
@@ -6,7 +15,8 @@ export type AiChatMessage = {
   id: string;
   role: AiChatMessageRole;
   content: string;
-  created_at: string;
+  createdAt?: string;
+  created_at?: string;
   status?: "streaming" | "completed" | "failed";
 };
 
@@ -33,11 +43,74 @@ export type AiChatStreamEvent =
       data: unknown;
     }
   | {
+      type: "data.summary";
+      sessionId: string;
+      messageId?: string | null;
+      toolCallId?: string | null;
+      data: {
+        datasets?: InputDataSummary[];
+        selectedDatasetIds?: string[];
+        missingDatasetIds?: string[];
+        payload?: InputDataSummary[];
+        summaries?: InputDataSummary[];
+      };
+    }
+  | {
+      type: "plan.created";
+      sessionId: string;
+      messageId?: string | null;
+      toolCallId?: string | null;
+      data: { steps?: PlanStep[] };
+    }
+  | {
+      type: "layer.created";
+      sessionId: string;
+      messageId?: string | null;
+      toolCallId?: string | null;
+      data: { layer?: MapLayerResult };
+    }
+  | {
+      type: "map.command";
+      sessionId: string;
+      messageId?: string | null;
+      toolCallId?: string | null;
+      data: {
+        commandId?: string;
+        command?: MapCommand;
+        reason?: string;
+      };
+    }
+  | {
+      type: "chart.created";
+      sessionId: string;
+      messageId?: string | null;
+      toolCallId?: string | null;
+      data: { chart?: ChartResult };
+    }
+  | {
+      type: "clarification";
+      sessionId: string;
+      messageId?: string | null;
+      toolCallId?: string | null;
+      data: {
+        question?: string;
+        missing?: string[];
+        options?: ClarificationOption[];
+      };
+    }
+  | {
       type: "error";
       sessionId?: string;
       messageId?: string | null;
       toolCallId?: string | null;
       data?: { message?: string; detail?: string } | unknown;
+    }
+  | {
+      type: "done";
+      sessionId?: string;
+      messageId?: string | null;
+      toolCallId?: string | null;
+      data?: Record<string, unknown>;
     };
 
 export type SendAiChatMessageOptions = {

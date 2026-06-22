@@ -3,7 +3,6 @@ import {
   Cartesian3,
   Color,
   defined,
-  FeatureDetection,
   Ion,
   Math as CesiumMath,
   ScreenSpaceEventHandler,
@@ -89,42 +88,31 @@ const CesiumSceneHelper = new (class {
     viewer.scene.globe.enableLighting = false;
     viewer.shadows = false;
 
-    const cesiumWidget = viewer.cesiumWidget as typeof viewer.cesiumWidget & {
-      supportsImageRenderingPixelated?: boolean;
-      forceResize?: boolean;
-    };
-    const featureDetection = FeatureDetection as typeof FeatureDetection & {
-      supportsImageRenderingPixelated?: () => boolean;
-    };
-    const supportsImageRenderingPixelated =
-      featureDetection.supportsImageRenderingPixelated?.() ?? false;
-    cesiumWidget.supportsImageRenderingPixelated =
-      supportsImageRenderingPixelated;
-    cesiumWidget.forceResize = true;
+    viewer.useBrowserRecommendedResolution = false;
+    viewer.resolutionScale = getMapResolutionScale();
     viewer.scene.debugShowFramesPerSecond = false;
 
-    if (supportsImageRenderingPixelated) {
-      let vtxfDpr = window.devicePixelRatio;
-      while (vtxfDpr >= 2) {
-        vtxfDpr /= 2;
-      }
-      viewer.resolutionScale = vtxfDpr;
-    }
-
-    this.addGoogleImageryProvider(viewer);
+    this.addDefaultBasemapProviders(viewer);
     this.resetView();
 
     return viewer;
   }
 
-  private addGoogleImageryProvider(viewer: Viewer) {
-    const googleImageryProvider = new UrlTemplateImageryProvider({
+  private addDefaultBasemapProviders(viewer: Viewer) {
+    const imageryProvider = new UrlTemplateImageryProvider({
       url: "https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
       subdomains: ["0", "1", "2", "3"],
       maximumLevel: 20,
       credit: "Google"
     });
-    viewer.imageryLayers.addImageryProvider(googleImageryProvider);
+    const annotationProvider = new UrlTemplateImageryProvider({
+      url: "https://mt{s}.google.com/vt/lyrs=h&x={x}&y={y}&z={z}",
+      subdomains: ["0", "1", "2", "3"],
+      maximumLevel: 20,
+      credit: "Google"
+    });
+    viewer.imageryLayers.addImageryProvider(imageryProvider);
+    viewer.imageryLayers.addImageryProvider(annotationProvider);
   }
 
   private getInitOptions() {
@@ -141,6 +129,7 @@ const CesiumSceneHelper = new (class {
       shadows: false,
       infoBox: false,
       CreditsDisplay: false,
+      useBrowserRecommendedResolution: false,
       shouldAnimate: true,
       selectionIndicator: false,
       orderIndependentTranslucency: false,
@@ -160,9 +149,9 @@ const CesiumSceneHelper = new (class {
 
   public getViewOptions() {
     return {
-      destination: Cartesian3.fromDegrees(114.519, 37.63547, 615),
+      destination: Cartesian3.fromDegrees(104.0668, 30.5728, 12000),
       orientation: {
-        pitch: CesiumMath.toRadians(-45)
+        pitch: CesiumMath.toRadians(-90)
       },
       duration: 1.8
     };
@@ -195,6 +184,13 @@ const CesiumSceneHelper = new (class {
     cesiumContainer?.remove();
   }
 })();
+
+function getMapResolutionScale() {
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const targetPixelRatio = Math.min(devicePixelRatio, 2);
+
+  return targetPixelRatio / devicePixelRatio;
+}
 
 export async function initializeViewer(container: HTMLElement) {
   return CesiumSceneHelper.initViewer(container as HTMLDivElement);

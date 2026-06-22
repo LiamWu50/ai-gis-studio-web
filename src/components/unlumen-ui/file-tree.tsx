@@ -12,6 +12,12 @@ import {
   FileCog,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -30,6 +36,8 @@ export type FileTreeElement = {
   defaultOpen?: boolean;
   /** Whether user-owned actions such as edit/delete are allowed. */
   userManaged?: boolean;
+  /** Whether the layer is currently visible on the map. */
+  visible?: boolean;
 };
 
 export type FileTreeRenderActions = (node: FileTreeElement) => React.ReactNode;
@@ -215,6 +223,45 @@ function FolderContent({ children }: { children: React.ReactNode }) {
 
 // ─── Node renderers ────────────────────────────────────────────────────────────
 
+function FileTreeNodeName({ name }: { name: string }) {
+  const textRef = React.useRef<HTMLSpanElement>(null);
+  const [isOverflowing, setIsOverflowing] = React.useState(false);
+
+  React.useEffect(() => {
+    const element = textRef.current;
+    if (!element) return;
+
+    const updateOverflow = () => {
+      setIsOverflowing(element.scrollWidth > element.clientWidth);
+    };
+
+    updateOverflow();
+    const resizeObserver = new ResizeObserver(updateOverflow);
+    resizeObserver.observe(element);
+
+    return () => resizeObserver.disconnect();
+  }, [name]);
+
+  const text = (
+    <span ref={textRef} className="block max-w-full truncate">
+      {name}
+    </span>
+  );
+
+  if (!isOverflowing) {
+    return text;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{text}</TooltipTrigger>
+      <TooltipContent side="right" align="center" className="max-w-72">
+        {name}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function FileTreeFile({ node }: { node: FileTreeElement }) {
   const { renderActions, showIcons } = useFileTree();
   const { ref, onMouseEnter } = useHighlightTarget();
@@ -237,16 +284,16 @@ function FileTreeFile({ node }: { node: FileTreeElement }) {
           node.highlight && "text-foreground",
         )}
       >
-        <div className="pointer-events-none flex min-w-0 flex-1 items-center gap-1.5">
+        <div className="flex min-w-0 max-w-[160px] flex-1 items-center gap-1.5">
           {showIcons && (
-            <span className="inline-flex size-3.5 shrink-0 items-center justify-center">
+            <span className="pointer-events-none inline-flex size-3.5 shrink-0 items-center justify-center">
               {icon}
             </span>
           )}
-          <span className="truncate">{node.name}</span>
+          <FileTreeNodeName name={node.name} />
         </div>
         {actions ? (
-          <span className="ml-auto inline-flex shrink-0 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+          <span className="ml-auto inline-flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
             {actions}
           </span>
         ) : null}
@@ -278,7 +325,9 @@ function FileTreeFolder({ node }: { node: FileTreeElement }) {
                   openIcon={<FolderOpen className="size-3.5" />}
                 />
               )}
-              <span>{node.name}</span>
+              <span className="min-w-0 max-w-[180px] flex-1">
+                <FileTreeNodeName name={node.name} />
+              </span>
             </div>
           </div>
         </button>
@@ -347,23 +396,25 @@ export function FileTree({
         setHighlightBounds,
       }}
     >
-      <div
-        className={cn(
-          "overflow-visible",
-          className,
-        )}
-      >
+      <TooltipProvider delayDuration={300}>
         <div
-          ref={containerRef}
-          className="relative isolate w-full p-1"
-          onMouseLeave={() => setHighlightBounds(null)}
+          className={cn(
+            "overflow-visible",
+            className,
+          )}
         >
-          <FileTreeHoverHighlight className="bg-accent/15 z-0" />
-          {elements.map((node) => (
-            <FileTreeNode key={node.id} node={node} />
-          ))}
+          <div
+            ref={containerRef}
+            className="relative isolate w-full p-1"
+            onMouseLeave={() => setHighlightBounds(null)}
+          >
+            <FileTreeHoverHighlight className="bg-accent/15 z-0" />
+            {elements.map((node) => (
+              <FileTreeNode key={node.id} node={node} />
+            ))}
+          </div>
         </div>
-      </div>
+      </TooltipProvider>
     </FileTreeContext.Provider>
   );
 }

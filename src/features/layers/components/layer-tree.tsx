@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Edit3, MoreVertical, Trash2 } from "lucide-react";
+import { Edit3, Eye, EyeOff, MoreVertical, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,8 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/toast";
 import { FileTree, type FileTreeElement } from "@/components/unlumen-ui/file-tree";
 import { useLayerWorkspace } from "../layer-workspace";
@@ -30,16 +34,16 @@ type MenuPosition = {
 };
 
 function LayerTreeItemActions({ node }: { node: FileTreeElement }) {
-  const visibleSwitchId = useId();
-  const { deleteUserLayer } = useLayerWorkspace();
+  const { deleteUserLayer, toggleLayerVisibility } = useLayerWorkspace();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isLayerVisible, setIsLayerVisible] = useState(true);
+  const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const isLayerVisible = node.visible ?? true;
 
   const openMenu = () => {
     const button = buttonRef.current;
@@ -96,6 +100,21 @@ function LayerTreeItemActions({ node }: { node: FileTreeElement }) {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleVisibilityClick = async () => {
+    setIsTogglingVisibility(true);
+    try {
+      await toggleLayerVisibility(node.id, !isLayerVisible);
+    } catch (error) {
+      toast({
+        title: "图层显隐更新失败",
+        description: error instanceof Error ? error.message : "请稍后重试",
+        variant: "error",
+      });
+    } finally {
+      setIsTogglingVisibility(false);
+    }
+  };
+
   const handleConfirmDelete = async () => {
     setIsDeleting(true);
     try {
@@ -119,27 +138,54 @@ function LayerTreeItemActions({ node }: { node: FileTreeElement }) {
 
   return (
     <>
-      <Button
-        ref={buttonRef}
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-5 rounded-sm bg-transparent text-foreground/45 shadow-none hover:bg-foreground/10 hover:text-foreground/80"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        aria-label={`${node.name} 图层操作`}
-        onClick={(event) => {
-          event.stopPropagation();
-          if (isOpen) {
-            setIsOpen(false);
-            return;
-          }
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-5 rounded-sm bg-transparent text-foreground/45 shadow-none hover:bg-transparent hover:text-foreground/80 [&_svg]:text-current"
+              aria-label={isLayerVisible ? `隐藏 ${node.name}` : `显示 ${node.name}`}
+              disabled={isTogglingVisibility}
+              onClick={(event) => {
+                event.stopPropagation();
+                void handleVisibilityClick();
+              }}
+            >
+              {isLayerVisible ? (
+                <Eye className="size-3" strokeWidth={1.8} />
+              ) : (
+                <EyeOff className="size-3" strokeWidth={1.8} />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            {isLayerVisible ? "隐藏图层" : "显示图层"}
+          </TooltipContent>
+        </Tooltip>
+        <Button
+          ref={buttonRef}
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-5 rounded-sm bg-transparent text-foreground/45 shadow-none hover:bg-transparent hover:text-foreground/80 [&_svg]:text-current"
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
+          aria-label={`${node.name} 图层操作`}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (isOpen) {
+              setIsOpen(false);
+              return;
+            }
 
-          openMenu();
-        }}
-      >
-        <MoreVertical className="size-3" strokeWidth={1.8} />
-      </Button>
+            openMenu();
+          }}
+        >
+          <MoreVertical className="size-3" strokeWidth={1.8} />
+        </Button>
+      </TooltipProvider>
 
       {isOpen && menuPosition
         ? createPortal(
@@ -154,26 +200,6 @@ function LayerTreeItemActions({ node }: { node: FileTreeElement }) {
             top: menuPosition.top,
           }}
         >
-          <div
-            className="relative inline-grid h-8 w-full grid-cols-[1fr_1fr] items-center text-xs font-medium"
-            role="menuitem"
-          >
-            <Switch
-              checked={isLayerVisible}
-              className="peer absolute inset-0 h-[inherit] w-auto rounded-none border-0 bg-foreground/10 shadow-none data-[state=checked]:bg-foreground/10 data-[state=unchecked]:bg-foreground/10 [&_span]:z-10 [&_span]:h-full [&_span]:w-1/2 [&_span]:rounded-none [&_span]:bg-foreground/90 [&_span]:shadow-none [&_span]:transition-transform [&_span]:duration-300 [&_span]:ease-[cubic-bezier(0.16,1,0.3,1)] [&_span]:data-[state=checked]:translate-x-full"
-              id={visibleSwitchId}
-              onCheckedChange={setIsLayerVisible}
-            />
-            <span className="pointer-events-none relative ms-px flex items-center justify-center px-1 text-center text-white transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] peer-data-[state=checked]:invisible peer-data-[state=unchecked]:translate-x-full">
-              <span className="font-medium">隐藏</span>
-            </span>
-            <span className="pointer-events-none relative me-px flex items-center justify-center px-1 text-center text-white transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] peer-data-[state=checked]:-translate-x-full peer-data-[state=unchecked]:invisible">
-              <span className="font-medium">显示</span>
-            </span>
-            <Label className="sr-only" htmlFor={visibleSwitchId}>
-              {node.name} 图层显影
-            </Label>
-          </div>
           <Button
             type="button"
             variant="ghost"
@@ -250,7 +276,7 @@ export function LayerTree({
       elements={elements}
       defaultOpenIds={defaultOpenIds}
       renderActions={(node) => <LayerTreeItemActions node={node} />}
-      className="[&_span]:text-foreground/80 [&_svg]:text-foreground/80"
+      className="[&_span]:text-foreground/80"
     />
   );
 }
