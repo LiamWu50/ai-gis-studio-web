@@ -1,16 +1,12 @@
 import type { FileTreeElement } from "@/components/unlumen-ui/file-tree";
 import {
   Activity,
-  Building2,
   Camera,
   Layers,
   Map,
-  MapPinned,
-  Route,
   Satellite,
   SquareDashedMousePointer,
   Tags,
-  TrafficCone,
   UserRound,
 } from "lucide-react";
 
@@ -30,12 +26,7 @@ export const LAYER_ELEMENTS: FileTreeElement[] = [
     name: "业务图层",
     type: "folder",
     icon: Layers,
-    children: [
-      { id: "road-network", name: "道路网络", icon: Route },
-      { id: "traffic-hub", name: "交通枢纽", icon: TrafficCone },
-      { id: "poi", name: "兴趣点位", icon: MapPinned },
-      { id: "building", name: "建筑轮廓", icon: Building2 },
-    ],
+    children: [],
   },
   {
     id: "user-layers",

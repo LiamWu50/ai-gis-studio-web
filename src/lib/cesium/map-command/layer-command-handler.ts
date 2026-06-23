@@ -5,6 +5,12 @@ import {
   type DataSource,
   type Viewer,
 } from "cesium";
+import {
+  findPrimitiveGeoJsonLayer,
+  isPrimitiveGeoJsonLayer,
+  setPrimitiveGeoJsonLayerOpacity,
+} from "@/lib/cesium/layers/primitive-geojson-layer-service";
+import type { PrimitiveGeoJsonLayerContainer } from "@/lib/cesium/layers/types";
 import type { MapCommand, MapCommandResult } from "@/types/agent";
 import type { CameraCommandHandler } from "./camera-command-handler";
 import type { MapCommandExecutorDependencies } from "./types";
@@ -55,10 +61,15 @@ export class LayerCommandHandler {
   }
 
   public setLayerOpacity(viewer: Viewer, layerId: string, opacity: number) {
-    const dataSource = this.getLoadedLayer(viewer, layerId);
+    const layer = this.getLoadedLayer(viewer, layerId);
     const clampedOpacity = Math.min(Math.max(opacity, 0), 1);
 
-    dataSource.entities.values.forEach((entity) => {
+    if (isPrimitiveGeoJsonLayer(layer)) {
+      setPrimitiveGeoJsonLayerOpacity(layer, clampedOpacity);
+      return;
+    }
+
+    layer.entities.values.forEach((entity) => {
       if (entity.point) {
         entity.point.color = new ConstantProperty(
           Color.YELLOW.withAlpha(clampedOpacity),
@@ -77,13 +88,21 @@ export class LayerCommandHandler {
     });
   }
 
-  private getLoadedLayer(viewer: Viewer, layerId: string): DataSource {
+  private getLoadedLayer(
+    viewer: Viewer,
+    layerId: string,
+  ): DataSource | PrimitiveGeoJsonLayerContainer {
     const userLayerDatasetId = this.findUserLayer(layerId)?.dataset.datasetId;
     const layer =
       viewer.dataSources.getByName(layerId).at(0) ??
       viewer.dataSources.getByName(`user-layer:${layerId}`).at(0) ??
       (userLayerDatasetId
         ? viewer.dataSources.getByName(`user-layer:${userLayerDatasetId}`).at(0)
+        : undefined) ??
+      findPrimitiveGeoJsonLayer(viewer, layerId) ??
+      findPrimitiveGeoJsonLayer(viewer, `user-layer:${layerId}`) ??
+      (userLayerDatasetId
+        ? findPrimitiveGeoJsonLayer(viewer, `user-layer:${userLayerDatasetId}`)
         : undefined);
 
     if (!layer) {

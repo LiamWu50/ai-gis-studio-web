@@ -13,6 +13,7 @@ import type {
   ImageryProvider,
   Matrix4,
   Model,
+  PrimitiveCollection,
   Rectangle,
   Resource,
   Viewer,
@@ -23,6 +24,7 @@ export type CesiumLayerKind =
   | "geojson"
   | "imagery"
   | "gltf-model"
+  | "primitive-geojson"
   | "tileset"
   | "vector";
 
@@ -94,6 +96,26 @@ export type GeoJsonLayerAddOptions = {
 };
 
 export type GeoJsonLayerHandle = LayerHandle<GeoJsonDataSource>;
+
+export type PrimitiveGeoJsonLayerAddOptions = {
+  data: object;
+  bbox?: [number, number, number, number] | null;
+  clampToGround?: boolean;
+  style?: GeoJsonLayerStyle;
+};
+
+export type PrimitiveGeoJsonLayerContainer = PrimitiveCollection & {
+  __layerId?: string;
+  __layerKind?: "primitive-geojson";
+  __serviceLayerName?: string;
+  __primitiveGeoJsonService?: {
+    updateOpacity: (opacity: number) => void;
+    flyTo: (options?: FlyToOptions) => Promise<void>;
+  };
+};
+
+export type PrimitiveGeoJsonLayerHandle =
+  LayerHandle<PrimitiveGeoJsonLayerContainer>;
 
 export type ImageryLayerStyle = {
   alpha?: number;
@@ -232,6 +254,7 @@ export type CesiumLayerContainer =
   | DataSource
   | ImageryLayer
   | ImageryLayerCollection
+  | PrimitiveGeoJsonLayerContainer
   | Model
   | Cesium3DTileset
   | ImageryProvider;

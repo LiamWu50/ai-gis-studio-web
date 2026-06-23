@@ -4,6 +4,7 @@ import {
   type DataSource,
   type Viewer,
 } from "cesium";
+import { findPrimitiveGeoJsonLayer } from "@/lib/cesium/layers/primitive-geojson-layer-service";
 import type {
   InputDataSummary,
   MapCommand,
@@ -94,6 +95,15 @@ export class CameraCommandHandler {
     const dataSource = this.getDataSourceByDatasetId(viewer, dataset.datasetId);
     if (dataSource) {
       await viewer.flyTo(dataSource, { duration });
+      return;
+    }
+
+    const primitiveLayer = findPrimitiveGeoJsonLayer(
+      viewer,
+      `user-layer:${dataset.datasetId}`,
+    );
+    if (primitiveLayer?.__primitiveGeoJsonService) {
+      await primitiveLayer.__primitiveGeoJsonService.flyTo({ duration });
       return;
     }
 

@@ -3,12 +3,18 @@ import {
   type DataSource,
   type Viewer,
 } from "cesium";
-import { GeoJsonLayerService } from "@/lib/cesium";
+import { GeoJsonLayerService } from "@/lib/cesium/layers/geojson-layer-service";
+import {
+  findPrimitiveGeoJsonLayer,
+  isPrimitiveGeoJsonLayer,
+  PrimitiveGeoJsonLayerService,
+} from "@/lib/cesium/layers/primitive-geojson-layer-service";
+import type { PrimitiveGeoJsonLayerContainer } from "@/lib/cesium/layers/types";
 import { getDatasetPreview } from "@/services/gis-data";
 import type { InputDataSummary } from "@/types/agent";
 
 export type LoadUserLayerResult =
-  | { status: "loaded"; dataSource: DataSource }
+  | { status: "loaded"; layer: DataSource | PrimitiveGeoJsonLayerContainer }
   | { status: "skipped"; reason: string };
 
 const GEOJSON_GEOMETRY_TYPES = new Set<InputDataSummary["geometryType"]>([
@@ -29,9 +35,15 @@ const isGeoJsonDataset = (dataset: InputDataSummary) =>
 const getLayerDataSourceName = (dataset: InputDataSummary) =>
   `user-layer:${dataset.datasetId}`;
 
+const getPreviewLimit = (dataset: InputDataSummary) =>
+  dataset.sourceType === "sample"
+    ? Math.min(dataset.featureCount ?? 300, 300)
+    : 1000;
+
 export const loadUserLayerToMap = async (
   viewer: Viewer | null,
   dataset: InputDataSummary,
+  options?: { flyTo?: boolean },
 ): Promise<LoadUserLayerResult> => {
   if (!viewer || viewer.isDestroyed()) {
     return { status: "skipped", reason: "地图尚未初始化" };
@@ -44,35 +56,63 @@ export const loadUserLayerToMap = async (
   const existingDataSource = viewer.dataSources
     .getByName(getLayerDataSourceName(dataset))
     .at(0);
+  const existingPrimitiveLayer = findPrimitiveGeoJsonLayer(
+    viewer,
+    getLayerDataSourceName(dataset),
+  );
 
   if (existingDataSource) {
-    await flyToDataset(viewer, dataset, existingDataSource);
-    return { status: "loaded", dataSource: existingDataSource };
+    if (options?.flyTo) {
+      await flyToDataset(viewer, dataset, existingDataSource);
+    }
+    return { status: "loaded", layer: existingDataSource };
   }
 
-  const preview = await getDatasetPreview(dataset.datasetId, 1000);
+  if (existingPrimitiveLayer) {
+    if (options?.flyTo) {
+      await flyToDataset(viewer, dataset, existingPrimitiveLayer);
+    }
+    return { status: "loaded", layer: existingPrimitiveLayer };
+  }
+
+  const preview = await getDatasetPreview(
+    dataset.datasetId,
+    getPreviewLimit(dataset),
+  );
   if (!preview.data || typeof preview.data !== "object") {
     return { status: "skipped", reason: "数据预览为空，无法上图" };
   }
 
-  const service = new GeoJsonLayerService({
-    viewer,
-    id: getLayerDataSourceName(dataset),
-    name: dataset.name,
-  });
-  const { layer: dataSource } = await service.add({
-    data: preview.data,
-    clampToGround: true,
-  });
-  await flyToDataset(viewer, dataset, dataSource);
+  const { layer } =
+    dataset.sourceType === "sample"
+      ? await new PrimitiveGeoJsonLayerService({
+          viewer,
+          id: getLayerDataSourceName(dataset),
+          name: dataset.name,
+        }).add({
+          data: preview.data,
+          bbox: preview.bbox ?? dataset.bbox,
+          clampToGround: true,
+        })
+      : await new GeoJsonLayerService({
+          viewer,
+          id: getLayerDataSourceName(dataset),
+          name: dataset.name,
+        }).add({
+          data: preview.data,
+          clampToGround: true,
+        });
+  if (options?.flyTo) {
+    await flyToDataset(viewer, dataset, layer);
+  }
 
-  return { status: "loaded", dataSource };
+  return { status: "loaded", layer };
 };
 
 const flyToDataset = async (
   viewer: Viewer,
   dataset: InputDataSummary,
-  dataSource: DataSource,
+  layer: DataSource | PrimitiveGeoJsonLayerContainer,
 ) => {
   if (dataset.bbox) {
     const [west, south, east, north] = dataset.bbox;
@@ -83,7 +123,13 @@ const flyToDataset = async (
     return;
   }
 
-  await viewer.flyTo(dataSource, {
+  if (isPrimitiveGeoJsonLayer(layer)) {
+    const primitiveService = layer.__primitiveGeoJsonService;
+    await primitiveService?.flyTo({ duration: 1.2 });
+    return;
+  }
+
+  await viewer.flyTo(layer, {
     duration: 1.2,
   });
 };

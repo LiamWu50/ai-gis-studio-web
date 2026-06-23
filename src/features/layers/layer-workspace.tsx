@@ -30,9 +30,7 @@ import {
 } from "lucide-react";
 import type { Viewer } from "cesium";
 import type { FileTreeElement } from "@/components/unlumen-ui/file-tree";
-import { loadUserLayerToMap } from "@/features/map/helpers/load-user-layer";
 import { useAuthSession } from "@/features/user/hooks/use-auth-session";
-import { MapCommandExecutor } from "@/lib/cesium/map-command";
 import {
   createDatasetLayer,
   deleteLayerTreeNode,
@@ -75,6 +73,29 @@ type LayerWorkspaceContextValue = {
   toggleSelectedLayer: (layerId: string) => void;
   userLayers: UserLayer[];
 };
+
+const LOCAL_SYSTEM_LAYER_IDS = [
+  "basemap-imagery",
+  "basemap-annotation",
+] as const;
+
+type LocalSystemLayerId = (typeof LOCAL_SYSTEM_LAYER_IDS)[number];
+
+type LocalSystemLayerVisibility = Record<LocalSystemLayerId, boolean>;
+
+const DEFAULT_LOCAL_SYSTEM_LAYER_VISIBILITY: LocalSystemLayerVisibility = {
+  "basemap-imagery": true,
+  "basemap-annotation": true,
+};
+
+const BASEMAP_IMAGERY_LAYER_INDEX: Partial<Record<LocalSystemLayerId, number>> =
+  {
+    "basemap-imagery": 0,
+    "basemap-annotation": 1,
+  };
+
+const isLocalSystemLayerId = (nodeId: string): nodeId is LocalSystemLayerId =>
+  LOCAL_SYSTEM_LAYER_IDS.includes(nodeId as LocalSystemLayerId);
 
 const LayerWorkspaceContext =
   createContext<LayerWorkspaceContextValue | null>(null);
@@ -130,15 +151,71 @@ const iconByKey = {
 const resolveLayerIcon = (iconKey: string | null) =>
   iconKey ? iconByKey[iconKey as keyof typeof iconByKey] : undefined;
 
-const toLayerTreeElement = (node: LayerTreeNode): FileTreeElement => ({
+const toLayerTreeElement = (
+  node: LayerTreeNode,
+  localSystemLayerVisibility: LocalSystemLayerVisibility,
+): FileTreeElement => ({
   id: node.id,
   name: node.name,
   type: node.type === "folder" ? "folder" : "file",
   icon: resolveLayerIcon(node.iconKey),
   userManaged: node.userManaged,
-  visible: node.visible,
-  children: node.children.map(toLayerTreeElement),
+  visible: isLocalSystemLayerId(node.id)
+    ? localSystemLayerVisibility[node.id]
+    : node.visible,
+  children: node.children.map((child) =>
+    toLayerTreeElement(child, localSystemLayerVisibility),
+  ),
 });
+
+const applyLocalSystemLayerVisibility = (
+  viewer: Viewer | null,
+  visibility: LocalSystemLayerVisibility,
+) => {
+  if (!viewer || viewer.isDestroyed()) return;
+
+  LOCAL_SYSTEM_LAYER_IDS.forEach((layerId) => {
+    const imageryLayerIndex = BASEMAP_IMAGERY_LAYER_INDEX[layerId];
+
+    if (imageryLayerIndex !== undefined) {
+      const imageryLayer = viewer.imageryLayers.get(imageryLayerIndex);
+      if (imageryLayer) {
+        imageryLayer.show = visibility[layerId];
+      }
+      return;
+    }
+
+    const dataSource = viewer.dataSources.getByName(layerId).at(0);
+    if (dataSource) dataSource.show = visibility[layerId];
+  });
+};
+
+const applyLocalSystemLayerVisibilityToElements = (
+  elements: FileTreeElement[],
+  visibility: LocalSystemLayerVisibility,
+): FileTreeElement[] =>
+  elements.map((element) => ({
+    ...element,
+    visible: isLocalSystemLayerId(element.id)
+      ? visibility[element.id]
+      : element.visible,
+    children: element.children
+      ? applyLocalSystemLayerVisibilityToElements(element.children, visibility)
+      : element.children,
+  }));
+
+const collectLocalSystemLayerVisibility = (
+  nodes: LayerTreeNode[],
+  visibility: LocalSystemLayerVisibility,
+) => {
+  for (const node of nodes) {
+    if (isLocalSystemLayerId(node.id)) {
+      visibility[node.id] = node.visible;
+    }
+
+    collectLocalSystemLayerVisibility(node.children, visibility);
+  }
+};
 
 const hasNode = (nodes: LayerTreeNode[], nodeId: string): boolean =>
   nodes.some((node) => node.id === nodeId || hasNode(node.children, nodeId));
@@ -202,7 +279,13 @@ const removeNode = (
 const toFallbackDataset = (node: LayerTreeNode): InputDataSummary => ({
   datasetId: node.datasetId ?? node.id,
   name: node.name,
-  sourceType: node.sourceType === "url" ? "url" : "upload",
+  sourceType:
+    node.sourceType === "url" ||
+    node.sourceType === "database" ||
+    node.sourceType === "sample" ||
+    node.sourceType === "map_service"
+      ? node.sourceType
+      : "upload",
   geometryType:
     node.geometryType === "Point" ||
     node.geometryType === "LineString" ||
@@ -259,13 +342,27 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
   const [userLayers, setUserLayers] = useState<UserLayer[]>([]);
   const [selectedLayerIds, setSelectedLayerIds] = useState<string[]>([]);
   const userLayersRef = useRef<UserLayer[]>([]);
+  const [localSystemLayerVisibility, setLocalSystemLayerVisibility] =
+    useState<LocalSystemLayerVisibility>(DEFAULT_LOCAL_SYSTEM_LAYER_VISIBILITY);
+  const localSystemLayerVisibilityRef = useRef(
+    DEFAULT_LOCAL_SYSTEM_LAYER_VISIBILITY,
+  );
 
   useEffect(() => {
     userLayersRef.current = userLayers;
   }, [userLayers]);
 
+  useEffect(() => {
+    localSystemLayerVisibilityRef.current = localSystemLayerVisibility;
+    applyLocalSystemLayerVisibility(viewerRef.current, localSystemLayerVisibility);
+  }, [localSystemLayerVisibility]);
+
   const registerViewer = useCallback((viewer: Viewer | null) => {
     viewerRef.current = viewer;
+    applyLocalSystemLayerVisibility(
+      viewer,
+      localSystemLayerVisibilityRef.current,
+    );
   }, []);
 
   const getViewer = useCallback(() => viewerRef.current, []);
@@ -292,6 +389,15 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
         const response = await getLayerTree(accessToken);
         if (!isMounted || activeTreeTokenRef.current !== accessToken) return;
 
+        const nextLocalSystemLayerVisibility = {
+          ...DEFAULT_LOCAL_SYSTEM_LAYER_VISIBILITY,
+        };
+        collectLocalSystemLayerVisibility(
+          response.nodes,
+          nextLocalSystemLayerVisibility,
+        );
+
+        setLocalSystemLayerVisibility(nextLocalSystemLayerVisibility);
         setLayerTreeNodes(response.nodes);
         setUserLayers((currentLayers) =>
           collectUserLayers(response.nodes, currentLayers),
@@ -337,6 +443,9 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
       setUserLayers((currentLayers) => upsertLayer(currentLayers, savedLayer));
 
       try {
+        const { loadUserLayerToMap } = await import(
+          "@/features/map/helpers/load-user-layer"
+        );
         const loadResult = await loadUserLayerToMap(viewerRef.current, dataset);
         const loadedLayer: UserLayer =
           loadResult.status === "loaded"
@@ -388,6 +497,14 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
 
   const toggleLayerVisibility = useCallback(
     async (nodeId: string, visible: boolean) => {
+      if (isLocalSystemLayerId(nodeId)) {
+        setLocalSystemLayerVisibility((currentVisibility) => ({
+          ...currentVisibility,
+          [nodeId]: visible,
+        }));
+        return;
+      }
+
       if (!accessToken) {
         throw new Error("请先登录后再更新图层");
       }
@@ -412,12 +529,27 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
       if (dataSource) {
         dataSource.show = visible;
       }
+
+      if (viewerRef.current) {
+        const { findPrimitiveGeoJsonLayer } = await import(
+          "@/lib/cesium/layers/primitive-geojson-layer-service"
+        );
+        const primitiveLayer =
+          findPrimitiveGeoJsonLayer(
+            viewerRef.current,
+            `user-layer:${updatedNode.datasetId ?? updatedNode.id}`,
+          ) ?? findPrimitiveGeoJsonLayer(viewerRef.current, updatedNode.id);
+        if (primitiveLayer) {
+          primitiveLayer.show = visible;
+        }
+      }
     },
     [accessToken],
   );
 
   const executeMapCommand = useCallback(
-    (command: MapCommand) => {
+    async (command: MapCommand) => {
+      const { MapCommandExecutor } = await import("@/lib/cesium/map-command");
       const executor = new MapCommandExecutor({
         getViewer: () => viewerRef.current,
         getUserLayers: () => userLayersRef.current,
@@ -433,21 +565,26 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
   const layerElements = useMemo(
     () => {
       if (isLoggedIn && layerTreeNodes) {
-        return layerTreeNodes.map(toLayerTreeElement);
+        return layerTreeNodes.map((node) =>
+          toLayerTreeElement(node, localSystemLayerVisibility),
+        );
       }
 
       const userLayerElements = userLayers.map(toUserLayerElement);
 
-      return LAYER_ELEMENTS.map((element) =>
-        element.id === "user-layers"
-          ? {
-              ...element,
-              children: userLayerElements,
-            }
-          : element,
+      return applyLocalSystemLayerVisibilityToElements(
+        LAYER_ELEMENTS.map((element) =>
+          element.id === "user-layers"
+            ? {
+                ...element,
+                children: userLayerElements,
+              }
+            : element,
+        ),
+        localSystemLayerVisibility,
       );
     },
-    [isLoggedIn, layerTreeNodes, userLayers],
+    [localSystemLayerVisibility, isLoggedIn, layerTreeNodes, userLayers],
   );
 
   const value = useMemo(
