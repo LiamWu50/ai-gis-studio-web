@@ -17,8 +17,8 @@ export const LAYER_ELEMENTS: FileTreeElement[] = [
     type: "folder",
     icon: Map,
     children: [
-      { id: "basemap-imagery", name: "谷歌影像", icon: Satellite },
-      { id: "basemap-annotation", name: "影像注记", icon: Tags },
+      { id: "basemap-imagery", name: "天地图影像", icon: Satellite },
+      { id: "basemap-annotation", name: "天地图注记", icon: Tags },
     ],
   },
   {

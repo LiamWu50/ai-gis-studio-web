@@ -20,7 +20,6 @@ export type AiChatMetadata = {
     bbox?: [number, number, number, number] | null;
     dataRef?: string;
   }>;
-  selectedLayerIds: string[];
   activeDatasetIds: string[];
   clientCapabilities: {
     mapCommands: string[];
@@ -28,7 +27,6 @@ export type AiChatMetadata = {
 };
 
 export type BuildChatContextOptions = {
-  selectedLayerIds?: string[];
   userLayers: UserLayer[];
   viewer: Viewer | null;
 };
@@ -115,19 +113,11 @@ const getMapView = (viewer: Viewer | null): AiChatMetadata["mapView"] => {
 };
 
 export const buildChatContext = ({
-  selectedLayerIds = [],
   userLayers,
   viewer,
 }: BuildChatContextOptions): BuildChatContextResult => {
   const validLayers = userLayers.filter(hasDatasetId);
-  const selectedLayerIdSet = new Set(selectedLayerIds);
-  const explicitlySelectedLayers = validLayers.filter((layer) =>
-    selectedLayerIdSet.has(layer.id),
-  );
-  const activeLayers =
-    explicitlySelectedLayers.length > 0
-      ? explicitlySelectedLayers
-      : validLayers.filter(isLayerVisible);
+  const activeLayers = validLayers.filter(isLayerVisible);
 
   const selectedDatasetIds = uniqueStrings(
     activeLayers.map((layer) => layer.dataset.datasetId),
@@ -139,7 +129,6 @@ export const buildChatContext = ({
     metadata: {
       mapView: getMapView(viewer),
       layers: validLayers.map(toLayerMetadata),
-      selectedLayerIds,
       activeDatasetIds: selectedDatasetIds,
       clientCapabilities: {
         mapCommands: MAP_COMMAND_CAPABILITIES,

@@ -10,8 +10,11 @@ import {
   AiChatError,
   sendAiChatMessage,
   type AiChatStreamEvent,
+  type AiChatDataSummaryEventData,
+  type AiChatLayerCreatedEventData,
+  type AiChatMapCommandEventData,
 } from "@/services/ai-chat";
-import type { MapCommand } from "@/types/agent";
+import type { InputDataSummary, MapCommand, MapLayerResult } from "@/types/agent";
 import { useLayerWorkspace } from "@/features/layers/layer-workspace";
 import { buildChatContext } from "../utils/build-chat-context";
 
@@ -56,55 +59,101 @@ const getErrorEventMessage = (event: AiChatStreamEvent) => {
 const appendStatusLine = (content: string, status: string) =>
   `${content}${content ? "\n\n" : ""}${status}`;
 
-const getToolName = (data: unknown) => {
-  if (!data || typeof data !== "object") return "工具";
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object";
 
-  const record = data as {
-    toolName?: unknown;
-    name?: unknown;
-    tool?: unknown;
-  };
+const readString = (
+  record: Record<string, unknown>,
+  keys: string[],
+): string | null => {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value;
+  }
+
+  return null;
+};
+
+const readNestedString = (
+  record: Record<string, unknown>,
+  key: string,
+  nestedKeys: string[],
+) => {
+  const value = record[key];
+  if (!isRecord(value)) return null;
+
+  return readString(value, nestedKeys);
+};
+
+const getToolName = (data: unknown) => {
+  if (!isRecord(data)) return "工具";
 
   return (
-    (typeof record.toolName === "string" && record.toolName) ||
-    (typeof record.name === "string" && record.name) ||
-    (typeof record.tool === "string" && record.tool) ||
+    readString(data, ["toolName", "name", "tool"]) ??
+    readNestedString(data, "input", ["toolName", "name", "tool", "operation"]) ??
+    readNestedString(data, "output", ["toolName", "name", "tool", "operation"]) ??
     "工具"
   );
 };
 
 const getToolErrorMessage = (data: unknown) => {
-  if (!data || typeof data !== "object") return "执行失败";
+  if (!isRecord(data)) return "执行失败";
 
-  const record = data as {
-    message?: unknown;
-    detail?: unknown;
-    error?: unknown;
-  };
+  const message = readString(data, ["message", "detail"]);
+  if (message) return message;
 
-  if (typeof record.message === "string") return record.message;
-  if (typeof record.detail === "string") return record.detail;
-
-  if (record.error && typeof record.error === "object") {
-    const error = record.error as { message?: unknown };
-    if (typeof error.message === "string") return error.message;
+  if (isRecord(data.error)) {
+    const errorMessage = readString(data.error, ["message", "detail", "code"]);
+    if (errorMessage) return errorMessage;
   }
 
   return "执行失败";
 };
 
+const isMapCommand = (value: unknown): value is MapCommand =>
+  isRecord(value) && typeof value.action === "string";
+
 const getMapCommand = (event: AiChatStreamEvent): MapCommand | null => {
   if (event.type !== "map.command") return null;
 
-  return event.data.command ?? null;
+  const data: AiChatMapCommandEventData = event.data;
+  if (isMapCommand(data)) return data;
+  if (isRecord(data) && isMapCommand(data.command)) return data.command;
+
+  return null;
+};
+
+const getLayerCreatedData = (
+  data: AiChatLayerCreatedEventData,
+): MapLayerResult | null => {
+  const record: Record<string, unknown> = data;
+
+  if (isRecord(record.layer)) {
+    return record.layer as MapLayerResult;
+  }
+
+  if (typeof record.id === "string") {
+    return record as MapLayerResult;
+  }
+
+  return null;
+};
+
+const getDataSummaries = (
+  data: AiChatDataSummaryEventData,
+): InputDataSummary[] => data.datasets ?? data.payload ?? data.summaries ?? [];
+
+const getCompletedMessageContent = (event: AiChatStreamEvent) => {
+  if (event.type !== "message.completed") return null;
+
+  return event.data.message?.content ?? event.data.content ?? null;
 };
 
 export function useAiChatRuntime({
   accessToken,
   sessionId,
 }: UseAiChatRuntimeOptions) {
-  const { executeMapCommand, getViewer, selectedLayerIds, userLayers } =
-    useLayerWorkspace();
+  const { executeMapCommand, getViewer, userLayers } = useLayerWorkspace();
 
   const chatModelAdapter = useMemo<ChatModelAdapter>(
     () => ({
@@ -122,7 +171,6 @@ export function useAiChatRuntime({
         let lastDeltaAt = performance.now();
         const chatContext = buildChatContext({
           userLayers,
-          selectedLayerIds,
           viewer: getViewer(),
         });
 
@@ -153,7 +201,7 @@ export function useAiChatRuntime({
           }
 
           if (event.type === "message.completed") {
-            content = event.data.message?.content ?? content;
+            content = getCompletedMessageContent(event) ?? content;
             yield {
               content: [{ type: "text", text: content }],
               status: { type: "complete", reason: "stop" },
@@ -161,11 +209,7 @@ export function useAiChatRuntime({
           }
 
           if (event.type === "data.summary") {
-            const summaries =
-              event.data.datasets ??
-              event.data.payload ??
-              event.data.summaries ??
-              [];
+            const summaries = getDataSummaries(event.data);
             if (summaries.length > 0) {
               content = appendStatusLine(
                 content,
@@ -185,6 +229,19 @@ export function useAiChatRuntime({
                 content: [{ type: "text", text: content }],
               };
             }
+          }
+
+          if (event.type === "layer.created") {
+            const layer = getLayerCreatedData(event.data);
+            if (!layer) continue;
+
+            content = appendStatusLine(
+              content,
+              `已生成结果图层：${layer.name}。`,
+            );
+            yield {
+              content: [{ type: "text", text: content }],
+            };
           }
 
           if (event.type === "tool.started") {
@@ -257,7 +314,6 @@ export function useAiChatRuntime({
       accessToken,
       executeMapCommand,
       getViewer,
-      selectedLayerIds,
       sessionId,
       userLayers,
     ],

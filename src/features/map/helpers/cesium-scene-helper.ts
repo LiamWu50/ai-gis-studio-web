@@ -3,18 +3,21 @@ import {
   Cartesian3,
   Color,
   defined,
+  ImageryLayer,
   Ion,
   Math as CesiumMath,
   ScreenSpaceEventHandler,
+  Terrain,
   UrlTemplateImageryProvider,
   Viewer,
 } from "cesium";
 
 let cesiumCssLoaded = false;
 
+const CesiumBaseUrl = "/cesium/";
 const CesiumdAccessToken =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1YjcxY2U3MC0yNjZlLTQ0YTYtODk5Ny04NTMyNDQ2YTA2YjQiLCJpZCI6MzAwNTg5LCJpYXQiOjE3NDY2ODczMTh9.tXD9wJq-1eH_z0-85mXAn7JTybBYJi9u1Ljqk1nzGdk";
-const CesiumBaseUrl = "/cesium/";
+const TiandituSubdomains = ["0", "1", "2", "3", "4", "5", "6", "7"];
 
 if (typeof window !== "undefined") {
   (window as Window & { CESIUM_BASE_URL?: string }).CESIUM_BASE_URL =
@@ -92,27 +95,48 @@ const CesiumSceneHelper = new (class {
     viewer.resolutionScale = getMapResolutionScale();
     viewer.scene.debugShowFramesPerSecond = false;
 
-    this.addDefaultBasemapProviders(viewer);
+    await Promise.all([
+      this.addDefaultBasemapProviders(viewer),
+      this.addDefaultTerrainProvider(viewer),
+    ]);
     this.resetView();
 
     return viewer;
   }
 
-  private addDefaultBasemapProviders(viewer: Viewer) {
+  private async addDefaultBasemapProviders(viewer: Viewer) {
+    const tiandituToken = getTiandituToken();
+    if (!tiandituToken) {
+      console.warn(
+        "Missing NEXT_PUBLIC_TIANDITU_TOKEN. Tianditu basemap was not loaded.",
+      );
+      return;
+    }
+
     const imageryProvider = new UrlTemplateImageryProvider({
-      url: "https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-      subdomains: ["0", "1", "2", "3"],
-      maximumLevel: 20,
-      credit: "Google"
+      url: getTiandituTileUrl("img_w", tiandituToken),
+      subdomains: TiandituSubdomains,
+      maximumLevel: 18,
+      credit: "Tianditu",
     });
     const annotationProvider = new UrlTemplateImageryProvider({
-      url: "https://mt{s}.google.com/vt/lyrs=h&x={x}&y={y}&z={z}",
-      subdomains: ["0", "1", "2", "3"],
-      maximumLevel: 20,
-      credit: "Google"
+      url: getTiandituTileUrl("cia_w", tiandituToken),
+      subdomains: TiandituSubdomains,
+      maximumLevel: 18,
+      credit: "Tianditu",
     });
-    viewer.imageryLayers.addImageryProvider(imageryProvider);
-    viewer.imageryLayers.addImageryProvider(annotationProvider);
+
+    viewer.imageryLayers.add(new ImageryLayer(imageryProvider));
+    viewer.imageryLayers.add(new ImageryLayer(annotationProvider));
+  }
+
+  private async addDefaultTerrainProvider(viewer: Viewer) {
+    viewer.scene.setTerrain(
+      Terrain.fromWorldTerrain({
+        requestVertexNormals: true,
+        requestWaterMask: true,
+      }),
+    );
   }
 
   private getInitOptions() {
@@ -130,17 +154,17 @@ const CesiumSceneHelper = new (class {
       infoBox: false,
       CreditsDisplay: false,
       useBrowserRecommendedResolution: false,
-      shouldAnimate: true,
+      shouldAnimate: false,
       selectionIndicator: false,
       orderIndependentTranslucency: false,
       contextOptions: {
         webgl: {
-          alpha: true,
+          alpha: false,
           depth: true,
-          stencil: true,
+          stencil: false,
           antialias: true,
-          premultipliedAlpha: true,
-          preserveDrawingBuffer: true,
+          premultipliedAlpha: false,
+          preserveDrawingBuffer: false,
           failIfMajorPerformanceCaveat: true
         }
       }
@@ -190,6 +214,14 @@ function getMapResolutionScale() {
   const targetPixelRatio = Math.min(devicePixelRatio, 2);
 
   return targetPixelRatio / devicePixelRatio;
+}
+
+function getTiandituToken() {
+  return process.env.NEXT_PUBLIC_TIANDITU_TOKEN?.trim() ?? "";
+}
+
+function getTiandituTileUrl(layerType: "img_w" | "cia_w", token: string) {
+  return `https://t{s}.tianditu.gov.cn/DataServer?T=${layerType}&x={x}&y={y}&l={z}&tk=${token}`;
 }
 
 export async function initializeViewer(container: HTMLElement) {

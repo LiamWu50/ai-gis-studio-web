@@ -76,8 +76,7 @@ export class VectorLayerService extends BaseLayerService<
             Color.CYAN,
           ),
           width: feature.style?.width ?? mergedStyle.line.width,
-          clampToGround:
-            feature.style?.clampToGround ?? mergedStyle.line.clampToGround,
+          clampToGround: true,
         },
         properties: feature.properties,
       });
@@ -101,10 +100,7 @@ export class VectorLayerService extends BaseLayerService<
           ),
           outlineWidth:
             feature.style?.outlineWidth ?? mergedStyle.polygon.outlineWidth,
-          heightReference:
-            feature.style?.clampToGround ?? mergedStyle.polygon.clampToGround
-              ? HeightReference.CLAMP_TO_GROUND
-              : HeightReference.NONE,
+          heightReference: HeightReference.CLAMP_TO_GROUND,
         },
         properties: feature.properties,
       });

@@ -67,10 +67,7 @@ type LayerWorkspaceContextValue = {
   getViewer: () => Viewer | null;
   layerElements: FileTreeElement[];
   registerViewer: (viewer: Viewer | null) => void;
-  selectedLayerIds: string[];
-  setSelectedLayerIds: (layerIds: string[]) => void;
   toggleLayerVisibility: (nodeId: string, visible: boolean) => Promise<void>;
-  toggleSelectedLayer: (layerId: string) => void;
   userLayers: UserLayer[];
 };
 
@@ -283,7 +280,8 @@ const toFallbackDataset = (node: LayerTreeNode): InputDataSummary => ({
     node.sourceType === "url" ||
     node.sourceType === "database" ||
     node.sourceType === "sample" ||
-    node.sourceType === "map_service"
+    node.sourceType === "map_service" ||
+    node.sourceType === "generated"
       ? node.sourceType
       : "upload",
   geometryType:
@@ -340,8 +338,9 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
     null,
   );
   const [userLayers, setUserLayers] = useState<UserLayer[]>([]);
-  const [selectedLayerIds, setSelectedLayerIds] = useState<string[]>([]);
   const userLayersRef = useRef<UserLayer[]>([]);
+  const layerLoadRequestRef = useRef(0);
+  const [viewerReadyVersion, setViewerReadyVersion] = useState(0);
   const [localSystemLayerVisibility, setLocalSystemLayerVisibility] =
     useState<LocalSystemLayerVisibility>(DEFAULT_LOCAL_SYSTEM_LAYER_VISIBILITY);
   const localSystemLayerVisibilityRef = useRef(
@@ -363,21 +362,15 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
       viewer,
       localSystemLayerVisibilityRef.current,
     );
+    setViewerReadyVersion((version) => version + 1);
   }, []);
 
   const getViewer = useCallback(() => viewerRef.current, []);
 
-  const toggleSelectedLayer = useCallback((layerId: string) => {
-    setSelectedLayerIds((currentLayerIds) =>
-      currentLayerIds.includes(layerId)
-        ? currentLayerIds.filter((currentLayerId) => currentLayerId !== layerId)
-        : [...currentLayerIds, layerId],
-    );
-  }, []);
-
   useEffect(() => {
     if (!isLoggedIn || !accessToken) {
       activeTreeTokenRef.current = null;
+      layerLoadRequestRef.current += 1;
       return;
     }
 
@@ -416,6 +409,60 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
       isMounted = false;
     };
   }, [accessToken, isLoggedIn]);
+
+  const syncLayerTreeToMap = useCallback(async (nodes: LayerTreeNode[]) => {
+    const requestId = (layerLoadRequestRef.current += 1);
+    const layers = collectUserLayers(nodes, userLayersRef.current);
+
+    setUserLayers((currentLayers) => collectUserLayers(nodes, currentLayers));
+
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    const { loadUserLayerToMap } = await import(
+      "@/features/map/helpers/load-user-layer"
+    );
+
+    const syncedLayers = await Promise.all(
+      layers.map(async (layer) => {
+        try {
+          const loadResult = await loadUserLayerToMap(viewer, layer.dataset);
+          const loadedLayer: UserLayer =
+            loadResult.status === "loaded"
+              ? { ...layer, loadStatus: "loaded" }
+              : {
+                  ...layer,
+                  loadStatus: "skipped",
+                  loadMessage: loadResult.reason,
+                };
+
+          if (loadResult.status === "loaded") {
+            loadResult.layer.show = layer.node.visible;
+          }
+
+          return loadedLayer;
+        } catch (error) {
+          const failedLayer: UserLayer = {
+            ...layer,
+            loadStatus: "failed",
+            loadMessage:
+              error instanceof Error ? error.message : "图层加载失败",
+          };
+          return failedLayer;
+        }
+      }),
+    );
+
+    if (layerLoadRequestRef.current !== requestId) return;
+
+    setUserLayers(syncedLayers);
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !layerTreeNodes) return;
+
+    void syncLayerTreeToMap(layerTreeNodes);
+  }, [isLoggedIn, layerTreeNodes, syncLayerTreeToMap, viewerReadyVersion]);
 
   const addUserLayerFromDataset = useCallback(
     async (
@@ -488,9 +535,31 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
       setUserLayers((currentLayers) =>
         currentLayers.filter((layer) => layer.id !== nodeId),
       );
-      setSelectedLayerIds((currentLayerIds) =>
-        currentLayerIds.filter((layerId) => layerId !== nodeId),
+
+      const layer = userLayersRef.current.find(
+        (currentLayer) => currentLayer.id === nodeId,
       );
+      const datasetId = layer?.dataset.datasetId ?? nodeId;
+      const dataSource = viewerRef.current?.dataSources
+        .getByName(`user-layer:${datasetId}`)
+        .at(0);
+      if (dataSource && viewerRef.current) {
+        viewerRef.current.dataSources.remove(dataSource, true);
+      }
+
+      if (viewerRef.current) {
+        const { findPrimitiveGeoJsonLayer } = await import(
+          "@/lib/cesium/layers/primitive-geojson-layer-service"
+        );
+        const primitiveLayer =
+          findPrimitiveGeoJsonLayer(
+            viewerRef.current,
+            `user-layer:${datasetId}`,
+          ) ?? findPrimitiveGeoJsonLayer(viewerRef.current, nodeId);
+        if (primitiveLayer) {
+          viewerRef.current.scene.primitives.remove(primitiveLayer);
+        }
+      }
     },
     [accessToken],
   );
@@ -595,10 +664,7 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
       getViewer,
       layerElements,
       registerViewer,
-      selectedLayerIds,
-      setSelectedLayerIds,
       toggleLayerVisibility,
-      toggleSelectedLayer,
       userLayers,
     }),
     [
@@ -608,9 +674,7 @@ export function LayerWorkspaceProvider({ children }: { children: ReactNode }) {
       getViewer,
       layerElements,
       registerViewer,
-      selectedLayerIds,
       toggleLayerVisibility,
-      toggleSelectedLayer,
       userLayers,
     ],
   );

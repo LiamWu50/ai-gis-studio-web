@@ -37,6 +37,15 @@ const DEFAULT_GEOJSON_STYLE: Required<GeoJsonLayerStyle> = {
   },
 };
 
+const GROUND_CLAMPED_STYLE = {
+  line: {
+    clampToGround: true,
+  },
+  polygon: {
+    clampToGround: true,
+  },
+} satisfies Pick<Required<GeoJsonLayerStyle>, "line" | "polygon">;
+
 export class GeoJsonLayerService extends BaseLayerService<
   GeoJsonDataSource,
   GeoJsonLayerAddOptions,
@@ -62,7 +71,7 @@ export class GeoJsonLayerService extends BaseLayerService<
 
     const style = mergeGeoJsonStyle(options.style);
     const dataSource = await GeoJsonDataSource.load(options.data, {
-      clampToGround: options.clampToGround ?? true,
+      clampToGround: true,
       sourceUri: options.sourceUri,
       markerColor: toCesiumColor(style.point.color, Color.YELLOW),
       markerSize: style.point.pixelSize,
@@ -117,10 +126,12 @@ export function mergeGeoJsonStyle(style?: GeoJsonLayerStyle) {
     line: {
       ...DEFAULT_GEOJSON_STYLE.line,
       ...style?.line,
+      ...GROUND_CLAMPED_STYLE.line,
     },
     polygon: {
       ...DEFAULT_GEOJSON_STYLE.polygon,
       ...style?.polygon,
+      ...GROUND_CLAMPED_STYLE.polygon,
     },
   };
 }
@@ -148,9 +159,7 @@ export function applyEntityStyle(
       toCesiumColor(style.line.color, Color.CYAN),
     );
     entity.polyline.width = new ConstantProperty(style.line.width);
-    entity.polyline.clampToGround = new ConstantProperty(
-      style.line.clampToGround,
-    );
+    entity.polyline.clampToGround = new ConstantProperty(true);
   }
 
   if (entity.polygon) {
@@ -165,9 +174,7 @@ export function applyEntityStyle(
       style.polygon.outlineWidth,
     );
     entity.polygon.heightReference = new ConstantProperty(
-      style.polygon.clampToGround
-        ? HeightReference.CLAMP_TO_GROUND
-        : HeightReference.NONE,
+      HeightReference.CLAMP_TO_GROUND,
     );
   }
 }

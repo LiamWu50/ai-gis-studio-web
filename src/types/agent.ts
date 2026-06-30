@@ -37,7 +37,13 @@ export type PlanStep = {
 export type InputDataSummary = {
   datasetId: string;
   name: string;
-  sourceType: "upload" | "url" | "database" | "sample" | "map_service";
+  sourceType:
+    | "upload"
+    | "url"
+    | "database"
+    | "sample"
+    | "map_service"
+    | "generated";
   geometryType?:
     | "Point"
     | "LineString"

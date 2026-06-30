@@ -1,5 +1,6 @@
 import {
   AssistantRuntimeProvider,
+  AuiIf,
   MessagePartPrimitive,
   MessagePrimitive,
   ThreadPrimitive,
@@ -127,9 +128,9 @@ function ChatPanelContent({
           className="min-h-0 flex-1"
           scrollClassName="flex h-full flex-col py-2"
         >
-          <ThreadPrimitive.Empty>
+          <AuiIf condition={(state) => state.thread.isEmpty}>
             <ChatEmptyState />
-          </ThreadPrimitive.Empty>
+          </AuiIf>
           <ThreadPrimitive.Messages components={{ Message: ChatMessage }} />
         </ScrollFade>
         <ChatPanelFooter onNewThread={onNewThread} />

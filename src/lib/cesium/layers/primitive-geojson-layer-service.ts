@@ -1,4 +1,5 @@
 import {
+  BillboardCollection,
   Cartesian3,
   Color,
   ColorGeometryInstanceAttribute,
@@ -6,8 +7,8 @@ import {
   GroundPolylineGeometry,
   GroundPolylinePrimitive,
   GroundPrimitive,
+  HeightReference,
   PerInstanceColorAppearance,
-  PointPrimitiveCollection,
   PolygonGeometry,
   PolygonHierarchy,
   PolylineColorAppearance,
@@ -64,6 +65,7 @@ type PrimitivePickMetadata = {
 };
 
 const MAX_PICK_PROPERTY_COUNT = 12;
+const pointImageCache = new Map<string, HTMLCanvasElement>();
 
 export function findPrimitiveGeoJsonLayer(
   viewer: Viewer,
@@ -136,7 +138,7 @@ export class PrimitiveGeoJsonLayerService extends BaseLayerService<
     this.data = parsedData;
     this.bbox = options.bbox ?? this.computeBoundingBox(parsedData);
     this.style = options.style;
-    this.clampToGround = options.clampToGround ?? true;
+    this.clampToGround = true;
 
     const layer = this.createLayerContainer();
     this.layer = layer;
@@ -258,9 +260,15 @@ export class PrimitiveGeoJsonLayerService extends BaseLayerService<
     if (features.length === 0) return;
 
     const style = mergeGeoJsonStyle(this.style);
-    const collection = new PointPrimitiveCollection();
+    const collection = new BillboardCollection();
     const color = toCesiumColor(style.point.color, Color.YELLOW);
     const outlineColor = toCesiumColor(style.point.outlineColor, Color.WHITE);
+    const pointImage = createPointImage({
+      color,
+      outlineColor,
+      outlineWidth: style.point.outlineWidth ?? 2,
+      pixelSize: style.point.pixelSize ?? 10,
+    });
 
     features.forEach((feature, featureIndex) => {
       const coordinates = getPointCoordinateGroups(feature.geometry);
@@ -268,10 +276,10 @@ export class PrimitiveGeoJsonLayerService extends BaseLayerService<
         collection.add({
           id: this.createPickMetadata(feature, featureIndex, coordinateIndex),
           position: this.toCartesian3Position(coordinate),
-          color,
-          outlineColor,
-          outlineWidth: style.point.outlineWidth,
-          pixelSize: style.point.pixelSize,
+          image: pointImage,
+          heightReference: HeightReference.CLAMP_TO_GROUND,
+          width: pointImage.width,
+          height: pointImage.height,
         });
       });
     });
@@ -461,6 +469,48 @@ function compactPickProperties(properties?: Record<string, unknown> | null) {
       .filter(([, value]) => typeof value !== "object" || value === null)
       .slice(0, MAX_PICK_PROPERTY_COUNT),
   );
+}
+
+function createPointImage(options: {
+  color: Color;
+  outlineColor: Color;
+  outlineWidth: number;
+  pixelSize: number;
+}) {
+  const pixelSize = Math.max(1, Math.ceil(options.pixelSize));
+  const outlineWidth = Math.max(0, Math.ceil(options.outlineWidth));
+  const imageSize = pixelSize + outlineWidth * 2;
+  const cacheKey = [
+    options.color.toCssColorString(),
+    options.outlineColor.toCssColorString(),
+    outlineWidth,
+    pixelSize,
+  ].join("|");
+  const cachedImage = pointImageCache.get(cacheKey);
+  if (cachedImage) return cachedImage;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = imageSize;
+  canvas.height = imageSize;
+
+  const context = canvas.getContext("2d");
+  if (!context) return canvas;
+
+  const center = imageSize / 2;
+  const radius = pixelSize / 2;
+  context.beginPath();
+  context.arc(center, center, radius, 0, Math.PI * 2);
+  context.fillStyle = options.color.toCssColorString();
+  context.fill();
+
+  if (outlineWidth > 0) {
+    context.lineWidth = outlineWidth;
+    context.strokeStyle = options.outlineColor.toCssColorString();
+    context.stroke();
+  }
+
+  pointImageCache.set(cacheKey, canvas);
+  return canvas;
 }
 
 function isFeatureCollection(data: object): data is GeoJsonFeatureCollection {

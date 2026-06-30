@@ -20,98 +20,81 @@ export type AiChatMessage = {
   status?: "streaming" | "completed" | "failed";
 };
 
+type AiChatStreamEventBase = {
+  sessionId?: string;
+  messageId?: string | null;
+  toolCallId?: string | null;
+};
+
+export type AiChatDataSummaryEventData = {
+  datasets?: InputDataSummary[];
+  selectedDatasetIds?: string[];
+  missingDatasetIds?: string[];
+  payload?: InputDataSummary[];
+  summaries?: InputDataSummary[];
+};
+
+export type AiChatLayerCreatedEventData =
+  | { layer?: MapLayerResult }
+  | MapLayerResult;
+
+export type AiChatMapCommandEventData =
+  | {
+      commandId?: string;
+      command?: MapCommand;
+      reason?: string;
+    }
+  | MapCommand;
+
 export type AiChatStreamEvent =
-  | {
+  | (AiChatStreamEventBase & {
       type: "message.delta";
-      sessionId: string;
-      messageId?: string | null;
-      toolCallId?: string | null;
       data: { delta?: string };
-    }
-  | {
+    })
+  | (AiChatStreamEventBase & {
       type: "message.completed";
-      sessionId: string;
-      messageId?: string | null;
-      toolCallId?: string | null;
-      data: { message?: AiChatMessage };
-    }
-  | {
+      data: { message?: AiChatMessage; content?: string };
+    })
+  | (AiChatStreamEventBase & {
       type: "tool.started" | "tool.completed" | "tool.failed";
-      sessionId: string;
-      messageId?: string | null;
-      toolCallId?: string | null;
       data: unknown;
-    }
-  | {
+    })
+  | (AiChatStreamEventBase & {
       type: "data.summary";
-      sessionId: string;
-      messageId?: string | null;
-      toolCallId?: string | null;
-      data: {
-        datasets?: InputDataSummary[];
-        selectedDatasetIds?: string[];
-        missingDatasetIds?: string[];
-        payload?: InputDataSummary[];
-        summaries?: InputDataSummary[];
-      };
-    }
-  | {
+      data: AiChatDataSummaryEventData;
+    })
+  | (AiChatStreamEventBase & {
       type: "plan.created";
-      sessionId: string;
-      messageId?: string | null;
-      toolCallId?: string | null;
       data: { steps?: PlanStep[] };
-    }
-  | {
+    })
+  | (AiChatStreamEventBase & {
       type: "layer.created";
-      sessionId: string;
-      messageId?: string | null;
-      toolCallId?: string | null;
-      data: { layer?: MapLayerResult };
-    }
-  | {
+      data: AiChatLayerCreatedEventData;
+    })
+  | (AiChatStreamEventBase & {
       type: "map.command";
-      sessionId: string;
-      messageId?: string | null;
-      toolCallId?: string | null;
-      data: {
-        commandId?: string;
-        command?: MapCommand;
-        reason?: string;
-      };
-    }
-  | {
+      data: AiChatMapCommandEventData;
+    })
+  | (AiChatStreamEventBase & {
       type: "chart.created";
-      sessionId: string;
-      messageId?: string | null;
-      toolCallId?: string | null;
       data: { chart?: ChartResult };
-    }
-  | {
+    })
+  | (AiChatStreamEventBase & {
       type: "clarification";
-      sessionId: string;
-      messageId?: string | null;
-      toolCallId?: string | null;
       data: {
         question?: string;
         missing?: string[];
         options?: ClarificationOption[];
       };
-    }
-  | {
+    })
+  | (AiChatStreamEventBase & {
       type: "error";
-      sessionId?: string;
-      messageId?: string | null;
-      toolCallId?: string | null;
       data?: { message?: string; detail?: string } | unknown;
-    }
-  | {
+    })
+  | (AiChatStreamEventBase & {
       type: "done";
-      sessionId?: string;
-      messageId?: string | null;
-      toolCallId?: string | null;
       data?: Record<string, unknown>;
-    };
+    });
 
 export type SendAiChatMessageOptions = {
   accessToken: string;
